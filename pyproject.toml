@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "task-dyva"
+version = "0.1.0"
+description = "task-DyVA"
+authors = ["Paul Jaffe <pauljaffe7@gmail.com>"]
+readme = "README.md"
+homepage = "https://github.com/pauljaffe/task-dyva"
+repository = "https://github.com/pauljaffe/task-dyva"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+torch = "^1.8.1"
+numpy = "^1.20.2"
+seaborn = "^0.11.0"
+pyyaml = "^5.4.1"
+scipy = "^1.6.1"
+neptune-client = "^0.9.16"
+dill = "^0.3.4"
+sklearn = "^0.0"
+pandas = "^1.1.5"
+matplotlib = "^3.4.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

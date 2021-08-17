@@ -1,0 +1,21 @@
+# Ignore model training checkpoints
+checkpoints/
+
+# Vim
+*.sw[po]
+
+# Mac stuff
+.DS_Store
+
+# Virtual environment
+.venv/**
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[co]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Neptune
+**/.neptune
