@@ -1,8 +1,10 @@
-# Ignore checkpoints and processed data
+# Ignore model training files
+training_runs/
 checkpoints/
 *_inputs.pt
 *_data.pkl
-*_inds.pkl
+*split_inds.pkl
+*logger_info.pickle
 
 # Ignore the Neptune config
 neptune_config.yaml
