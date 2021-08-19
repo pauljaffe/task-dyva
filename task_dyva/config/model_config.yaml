@@ -1,0 +1,57 @@
+model_params:
+  latent_dim: 16
+  init_rnn_dim: 64
+  init_hidden_dim: 64
+  w_dim: 16
+  encoder_mlp_hidden_dim: 64
+  encoder_rnn_input_dim: 64
+  encoder_rnn_hidden_dim: 64
+  encoder_rnn_dropout: 0.4
+  encoder_rnn_n_layers: 1
+  encoder_combo_hidden_dim: 64
+  decoder_hidden_dim: 64
+  dynamics_matrix_mult: 0.99
+  dynamics_init_method: 'custom_rotation'
+  trans_dim: 2
+  prior_dist: 'Normal'
+  posterior_dist: 'Normal'
+  likelihood_dist: 'Normal'
+  likelihood_scale_param: 0.75
+  model_type: 'LLDVAE'
+
+training_params:
+  num_epochs: 1000000
+  batch_size: 128
+  train_frac: 0.5
+  val_frac: 0.2
+  test_frac: 0.3
+  optim_alg: 'adam'
+  LR: 0.0001
+  weight_decay: 0
+  clip_grads: True
+  clip_val: 5
+  n_workers: 0
+  rand_seed: 917
+  learn_prior: True
+  objective: 'elbo'
+  do_amsgrad: True
+  # loss function params
+  start_temp: 0.01
+  cool_rate: 40000
+  temp_update_every: 1
+  # early stopping params
+  stop_patience: 20
+  stop_min_epoch: 500
+  stop_delta: 0
+  stop_metric: 'switch_con_avg'
+
+data_params:
+  input_dim: 4
+  u_dim: 10
+  nth_play_range: [150, 500]
+  outlier_method: 'mad'
+  outlier_thresh: 10
+  keep_every: 10
+  train_transform_kwargs: {'step_size': 20, 'duration': 5000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000], 'data_augmentation_type': 'kde', 'data_aug_kernel_bandwidth': 0.25, 'aug_rt_sd': 25, 'aug_resample_frac': 0.75, 'upscale_mult': 10, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'match_accuracy': False, 'rt_method': 'center_of_mass'}
+  val_transform_kwargs: {'step_size': 20, 'duration': 10000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 15000, 25000, 35000, 45000, 55000], 'data_augmentation_type': None, 'upscale_mult': 1, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'rt_method': 'center_of_mass'}
+  test_transform_kwargs: {'step_size': 20, 'duration': 10000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 15000, 25000, 35000, 45000, 55000], 'data_augmentation_type': None, 'upscale_mult': 1, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'rt_method': 'center_of_mass'}
