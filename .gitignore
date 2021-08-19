@@ -4,6 +4,9 @@ checkpoints/
 *_data.pkl
 *_inds.pkl
 
+# Ignore the Neptune config
+neptune_config.yaml
+
 # Vim
 *.sw[po]
 
