@@ -23,7 +23,7 @@ import seaborn as sns
 from scipy.stats import gaussian_kde, bernoulli
 
 from . import transforms as T
-from .modelanalysis import z_pca
+from .utils import z_pca
 
 
 class EbbFlowDataset(Dataset):

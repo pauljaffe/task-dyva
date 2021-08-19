@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from scipy.stats import special_ortho_group
+from sklearn.decomposition import PCA
 
 
 class Constants(object):
@@ -143,3 +144,24 @@ def _init_dynamics_mats(dim, n_mats, rand_seed, method):
         dyn_mats = np.stack(all_mats, axis=0)
 
     return torch.tensor(dyn_mats).type(torch.FloatTensor)
+
+
+def z_pca(z, n_keep, whiten=False):
+    # Transform the latent state vars to PCA space
+    if torch.is_tensor(z):
+        z_np = z.cpu().detach().numpy()
+    else:
+        z_np = z
+    z_dim = z_np.shape[2]
+    T = z_np.shape[0]
+    N = z_np.shape[1]
+    z_cat = np.reshape(z_np, (T * N, z_dim), order='F') # concatenate
+
+    # Run PCA
+    z_pca_obj = PCA(whiten=whiten).fit(z_cat)
+    z_var_exp = z_pca_obj.explained_variance_ratio_
+    z_transformed = z_pca_obj.transform(z_cat)
+    z_reduced = np.reshape(
+            z_transformed, (T, N, z_dim), order='F')[:, :, :n_keep]
+
+    return z_reduced, z_var_exp
