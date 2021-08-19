@@ -1,5 +1,8 @@
-# Ignore model training checkpoints
+# Ignore checkpoints and processed data
 checkpoints/
+*_inputs.pt
+*_data.pkl
+*_inds.pkl
 
 # Vim
 *.sw[po]
