@@ -1,10 +1,11 @@
-# Ignore model training files
+# Ignore model training files, testing stuff
 training_runs/
 checkpoints/
 *_inputs.pt
 *_data.pkl
 *split_inds.pkl
 *logger_info.pickle
+check_package_versions.py
 
 # Ignore the Neptune config
 neptune_config.yaml
