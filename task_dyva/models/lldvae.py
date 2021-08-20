@@ -53,7 +53,7 @@ class _EncoderXU2H(nn.Module):
         self.encoder_mlp_hidden_dim = params['model_params'][
             'encoder_mlp_hidden_dim']
         self.encoder_rnn_dropout = params['model_params'].get(
-            'encoder_rnn_drouput', 0.0)
+            'encoder_rnn_dropout', 0.0)
         self.encoder_rnn_n_layers = params['model_params'].get(
             'encoder_rnn_n_layers', 1)
         self.encoder_rnn_bidir = params['model_params'].get(
@@ -175,6 +175,12 @@ class LLDVAE(nn.Module):
                                     device=self.device), 
                          **prior_grad)])
 
+        # Latent state initialization
+        self.init_z0 = nn.Sequential(
+            nn.Linear(self.w_dim, self.init_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.init_hidden_dim, self.latent_dim))
+
         # Build the transition network: self.trans_net determines 
         # the weights on the transition matrices in the state update equation.
         if self.trans_dim == 0:
@@ -185,11 +191,7 @@ class LLDVAE(nn.Module):
             nn.Linear((self.latent_dim + self.u_dim), num_mats),
             nn.Softmax(dim=1))
 
-        # Initialize w0 and z0 params
-        self.init_z0 = nn.Sequential(
-            nn.Linear(self.w_dim, self.init_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.init_hidden_dim, self.latent_dim))
+        # Innovation/noise initialization
         w0_means = torch.empty(self.w_dim, device=self.device)
         self.w0_means = Parameter(nn.init.normal_(w0_means))
         w0_vars = torch.empty(self.w_dim, device=self.device)
