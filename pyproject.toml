@@ -9,16 +9,14 @@ repository = "https://github.com/pauljaffe/task-dyva"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-torch = "^1.8.1"
-numpy = "^1.20.2"
-seaborn = "^0.11.0"
-pyyaml = "^5.4.1"
-scipy = "^1.6.1"
-neptune-client = "^0.9.16"
-dill = "^0.3.4"
+numpy = "1.20.2"
+torch = "1.8.1"
+scipy = "1.6.1"
+seaborn = "~0.11"
+PyYAML = "^5.4.1"
 sklearn = "^0.0"
-pandas = "^1.1.5"
-matplotlib = "^3.4.1"
+neptune-client = "^0.10.4"
+dill = "^0.3.4"
 
 [tool.poetry.dev-dependencies]
 

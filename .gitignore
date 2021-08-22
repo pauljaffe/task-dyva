@@ -1,4 +1,4 @@
-# Ignore model training files
+# Ignore model training files, testing stuff
 training_runs/
 checkpoints/
 *_inputs.pt
