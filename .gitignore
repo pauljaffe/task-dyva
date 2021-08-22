@@ -7,7 +7,7 @@ checkpoints/
 *logger_info.pickle
 
 # Ignore the Neptune config
-#neptune_config.yaml
+neptune_config.yaml
 
 # Vim
 *.sw[po]
