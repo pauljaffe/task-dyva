@@ -71,6 +71,7 @@ class EbbFlowDataset(Dataset):
         self.preprocessed = preprocessed
         self.split = split
         self.resampling_type = self.params.get('data_augmentation_type', None)
+        # set up data transforms
         self.default_pre = [T.SmoothResponses(), T._Trim()]
         self.supplied_pre = pre_transform
         self.supplied_pre_params = pre_transform_params
@@ -475,8 +476,8 @@ class EbbFlowGameData():
         (transformed, filtered, etc.). 
     processed_format: For data that has already been processed. 
 
-    Data are maintained in two formats: which have a one-to-one 
-    correspondence: a discrete format,which is easier to analyze, and a 
+    Data are maintained in two formats which have a one-to-one 
+    correspondence: a discrete format, which is easier to analyze, and a 
     continuous format, which is the format supplied to the model. 
     If instantiated with the preprocessed constructor, discrete and continuous 
     are initialized as empty arrays and populated sequentially during 
