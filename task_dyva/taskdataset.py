@@ -57,7 +57,7 @@ class EbbFlowDataset(Dataset):
         with the same length as transform.
     """
 
-    needs_data_augmentation = ('kde', 'adaptive_gaussian')
+    needs_data_augmentation = ('kde', 'kde_no_switch_cost', 'adaptive_gaussian')
 
     def __init__(self, experiment_dir, params, preprocessed, split,
                  processed_dir, pre_transform=None, transform=None,
@@ -206,9 +206,29 @@ class EbbFlowDataset(Dataset):
                     resampling_info=resampling_info))
         return data_list
 
+    def _remove_switch_cost(self, rts_typed):
+        # Translate RTs to eliminate switch cost
+        con_rt_diff = np.mean(rts_typed[2]) - np.mean(rts_typed[0])
+        incon_rt_diff = np.mean(rts_typed[3]) - np.mean(rts_typed[1])
+        orig_mean_typed_rt = np.mean([np.mean(rts_typed[i]) for i in range(4)])
+        rts_typed[2] = np.array(rts_typed[2]) - con_rt_diff
+        rts_typed[3] = np.array(rts_typed[3]) - incon_rt_diff
+        # Translate RTs again so that mean RT is the same
+        new_mean_typed_rt = np.mean([np.mean(rts_typed[i]) for i in range(4)])
+        mean_rt_diff = orig_mean_typed_rt - new_mean_typed_rt
+        for ttype in range(4):
+            rts_typed[ttype] += mean_rt_diff
+        return rts_typed
+
     def _get_resampling_sm_info(self, data):
+        # Trial types: 
+        # 0 = congruent + stay
+        # 1 = incongruent + stay
+        # 2 = congruent + switch
+        # 3 = incongruent + switch
         resampling_dists = {}
         acc = {}
+        rts_typed = {}
         sm_params = {'step_size': self.params['step_size'],
                      'smoothing_type': self.params.get('smoothing_type', 
                                                        'gaussian'),
@@ -223,10 +243,16 @@ class EbbFlowDataset(Dataset):
                 this_rts.extend(d._get_field_by_trial_type(ttype, 'urt_ms'))
                 this_correct.extend(d._get_field_by_trial_type(
                     ttype, 'ucorrect'))
+            rts_typed[ttype] = this_rts
 
-            # Resampling info
-            if self.resampling_type == 'kde':
-                bw = self.params.get('data_aug_kernel_bandwidth', 0.25)
+        # Resampling info
+        bw = self.params.get('data_aug_kernel_bandwidth', 0.25)
+        if self.resampling_type == 'kde_no_switch_cost':
+            rts_typed = self._remove_switch_cost(rts_typed)
+
+        for ttype in range(4):
+            this_rts = rts_typed[ttype]
+            if self.resampling_type in ['kde', 'kde_no_switch_cost']:
                 this_resampling = gaussian_kde(this_rts, bw_method=bw)
             else:
                 this_resampling = None
@@ -676,7 +702,7 @@ class EbbFlowGameData():
         # Randomly sample condition
         con_ind = np.random.choice(4)
         this_dist = self.resampling_info['rts'][con_ind]
-        if self.resampling_type == 'kde':
+        if self.resampling_type in ['kde', 'kde_no_switch_cost']:
             new_rt_ms = this_dist.resample(size=1)
 
         # Stay vs. switch
