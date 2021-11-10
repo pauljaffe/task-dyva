@@ -47,7 +47,7 @@ class ConfigMixin:
                         'stop_min_epoch', 'stop_delta', 'stop_metric'}
 
     _data_params = {'input_dim', 'u_dim', 'nth_play_range', 'outlier_method', 
-                    'outlier_thresh', 'keep_every'}
+                    'outlier_thresh', 'keep_every', 'data_rand_seed'}
 
     _transform_splits = {'train', 'val', 'test'}
 
