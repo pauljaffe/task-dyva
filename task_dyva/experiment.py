@@ -510,6 +510,7 @@ class Experiment(nn.Module,
 
     def get_behavior_metrics(self, dataset, epoch, label, save_local=False, 
                              load_local=True, analyze_latents=False,
+                             get_model_outputs=True, stats_dir=None,
                              **kwargs):
         """Get behavioral stats for user and model from the supplied dataset.
 
@@ -526,6 +527,10 @@ class Experiment(nn.Module,
             stats object. 
         analyze_latents (Boolean, optional): Whether or not to analyze
             the latent state variables. 
+        get_model_outputs (Boolean, optional): Whether or not to generate
+            model outputs.
+        stats_dir (str): Name of the directory within self.base_dir to
+            save model stats.
         **kwargs (optional): Additional key, value pairs to pass to
             EbbFlowStats.
 
@@ -535,31 +540,37 @@ class Experiment(nn.Module,
             supplied dataset. 
         """
 
-        stats_path = os.path.join(self.base_dir, 'model_stats', 
-                                  f'{label}_epoch{epoch}.pkl')
+        if stats_dir is None:
+            stats_dir = 'model_stats'
+        stats_path = os.path.join(self.base_dir, stats_dir, save_str)
         if load_local:
             if os.path.exists(stats_path):
                 with open(stats_path, 'rb') as path:
                     stats = pickle.load(path)
                 return stats
 
-        loader = self._get_data_loader(dataset, shuffle=False)
-        rates = []
         if analyze_latents:
             latents = []
         else:
             latents = None
-        for batch_ind, batch in enumerate(loader):
-            loaded_batch = batch.batch.to(self.device)
-            outputs = self.model.forward(loaded_batch,
-                                         generate_mode=True, clamp=False)
-            rates.append(outputs[1].mean)
-            if analyze_latents:
-                latents.append(outputs[3])
 
-        rates = torch.cat(rates, 1)
-        if analyze_latents:
-            latents = torch.cat(latents, 1)
+        if get_model_outputs:
+            loader = self._get_data_loader(dataset, shuffle=False)
+            rates = []
+            for batch_ind, batch in enumerate(loader):
+                loaded_batch = batch.batch.to(self.device)
+                outputs = self.model.forward(loaded_batch,
+                                             generate_mode=True, clamp=False)
+                rates.append(outputs[1].mean)
+                if analyze_latents:
+                    latents.append(outputs[3])
+
+            rates = torch.cat(rates, 1)
+            if analyze_latents:
+                latents = torch.cat(latents, 1)
+        else:
+            rates = None
+
         stats_obj = EbbFlowStats(rates, dataset, latents=latents, **kwargs)
         stats = stats_obj.get_stats()
 
@@ -568,6 +579,7 @@ class Experiment(nn.Module,
                         exist_ok=True)
             with open(stats_path, 'wb') as path:
                 pickle.dump(stats_obj, path, protocol=4)
+
         return stats_obj
 
     def _split_train_val_test(self, data):
