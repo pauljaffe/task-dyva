@@ -31,9 +31,8 @@ class Experiment(nn.Module,
     By default, model training metrics will be logged using Neptune
     (recommended; see https://neptune.ai/), but this can be disabled 
     by setting 'do_logging' in kwargs to False. If logging is enabled,
-    the project_name field in config/neptune_config.yaml should be set
-    to the name of the Neptune project, and an API token should be 
-    established for authentication.
+    neptune_proj_name should be supplied as an argument,
+    and an API token should be established for authentication.
 
     See https://docs.neptune.ai/getting-started/installation 
     for detailed instructions. 
@@ -76,6 +75,8 @@ class Experiment(nn.Module,
         model training. If None (default) and training is being resumed, the 
         most recently saved checkpoint epoch will be used. This arg
         is ignored for new training runs. 
+    neptune_proj_name (str, optional): Name of the project as defined by
+        the Neptune logger. 
     **kwargs (optional): Additional key: value mappings which can be passed
         to override the parameters defined in the config file. 
         See ConfigMixin.
@@ -85,10 +86,11 @@ class Experiment(nn.Module,
                  expt_tags=None, config=None, device='cuda:0', 
                  processed_dir=None, pre_transform=None, transform=None, 
                  pre_transform_params=None, transform_params=None, 
-                 load_epoch=None, **kwargs):
+                 load_epoch=None, neptune_proj_name=None, **kwargs):
         super(Experiment, self).__init__()
         self.base_dir = base_dir
         self.expt_name = expt_name
+        self.neptune_proj_name = neptune_proj_name
         self.expt_tags = [] if expt_tags is None else expt_tags
         self.device = device
         self.checkpoint_dir = os.path.join(base_dir, 'checkpoints')
@@ -235,17 +237,12 @@ class Experiment(nn.Module,
             self._load_local_checkpoint(epoch=load_epoch)
 
     def _reload_logger(self):
-        project_name = self._get_neptune_info()
+        project_name = self.neptune_proj_name
         with open(os.path.join(
                 self.base_dir, 'logger_info.pickle'), 'rb') as handle:
             logger_info = pickle.load(handle)
         expt_id = logger_info['id']
         self.logger = neptune.init(project=project_name, run=expt_id)
-
-    def _get_neptune_info(self):
-        neptune_config = yaml.safe_load(
-            pkgutil.get_data('task_dyva', 'config/neptune_config.yaml'))
-        return neptune_config['project_name']
 
     def _make_new_experiment(self):
         os.makedirs(self.checkpoint_dir, exist_ok=True)
@@ -253,7 +250,7 @@ class Experiment(nn.Module,
         self.iteration = 0
         self.checkpoint = None
         if self.do_logging:
-            project_name = self._get_neptune_info()
+            project_name = self.neptune_proj_name
             self.logger = neptune.init(project=project_name, 
                                        name=self.expt_name)
             self.logger['parameters'] = self.config_params
@@ -265,7 +262,7 @@ class Experiment(nn.Module,
 
     def _load_local_checkpoint(self, epoch=None):
         if epoch is None:
-            # Find epoch of most recent local checkpoint; if none exist,
+            # Find epoch of most recent local checkpoint; if none exists,
             # create a new experiment.
             checkpoint_fns = glob.glob(self.checkpoint_dir 
                                        + 'checkpoint_epoch*.pth')
@@ -281,8 +278,13 @@ class Experiment(nn.Module,
                                            f'checkpoint_epoch{epoch}.pth')
             self.checkpoint = torch.load(checkpoint_path, 
                                          map_location=self.device)
-        self.iteration = self.checkpoint['iteration']
-        self.start_epoch = self.checkpoint['epoch'] + 1
+        try:
+            self.iteration = self.checkpoint['iteration']
+            self.start_epoch = self.checkpoint['epoch'] + 1
+        except:
+            self.iteration = 0
+            self.start_epoch = 0
+
 
     def _load_logged_checkpoint(self, epoch=None):
         if epoch is None:
