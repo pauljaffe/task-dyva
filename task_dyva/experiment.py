@@ -231,10 +231,21 @@ class Experiment(nn.Module,
             except FileNotFoundError:
                 self._make_new_experiment()
         else:
-            # If load_epoch is None, the most recent local checkpoint is
-            # loaded. If no checkpoints are found, a new experiment is
-            # created. 
-            self._load_local_checkpoint(epoch=load_epoch)
+            if self.params_to_load is None:
+                # Loads parameters from a checkpoint designated by epoch number.
+                # If load_epoch is None, the most recent local checkpoint is
+                # loaded. If no checkpoints are found, a new experiment is
+                # created. 
+                self._load_local_checkpoint(epoch=load_epoch)
+            else:
+                # Loads parameters from a named checkpoint file. 
+                self._load_params_file()
+            try:
+                self.iteration = self.checkpoint['iteration']
+                self.start_epoch = self.checkpoint['epoch'] + 1
+            except:
+                self.iteration = 0
+                self.start_epoch = 0
 
     def _reload_logger(self):
         project_name = self.neptune_proj_name
@@ -278,12 +289,12 @@ class Experiment(nn.Module,
                                            f'checkpoint_epoch{epoch}.pth')
             self.checkpoint = torch.load(checkpoint_path, 
                                          map_location=self.device)
-        try:
-            self.iteration = self.checkpoint['iteration']
-            self.start_epoch = self.checkpoint['epoch'] + 1
-        except:
-            self.iteration = 0
-            self.start_epoch = 0
+
+    def _load_params_file(self):
+        checkpoint_path = os.path.join(self.base_dir, self.params_to_load)
+                                       f'checkpoint_epoch{epoch}.pth')
+        self.checkpoint = torch.load(checkpoint_path, 
+                                     map_location=self.device)
 
     def _load_logged_checkpoint(self, epoch=None):
         if epoch is None:

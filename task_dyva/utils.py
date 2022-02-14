@@ -59,7 +59,7 @@ class ConfigMixin:
                          'kernel_sd', 'match_accuracy', 'rt_method'}
 
     _experiment_params = {'split_indices', 'processed_save_dir', 'mode',
-                          'do_logging', 'do_early_stopping'}
+                          'do_logging', 'do_early_stopping', 'params_to_load'}
 
     def update_params(self, **kwargs):
         # Update params from the config file
@@ -94,6 +94,7 @@ class ConfigMixin:
         self.mode = kwargs.get('mode', 'training')
         self.do_logging = kwargs.get('do_logging', True)
         self.do_early_stopping = kwargs.get('do_early_stopping', True)
+        self.params_to_load = kwargs.get('params_to_load', None)
 
 
 def median_absolute_dev(data, median=None):
