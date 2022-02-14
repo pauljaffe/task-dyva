@@ -285,7 +285,6 @@ class Experiment(nn.Module,
             self.iteration = 0
             self.start_epoch = 0
 
-
     def _load_logged_checkpoint(self, epoch=None):
         if epoch is None:
             # Find epoch of most recent checkpoint
@@ -356,6 +355,10 @@ class Experiment(nn.Module,
             datasets_to_prep = [pre_datasets[2]]
             splits_to_prep = [splits[2]]
             splits_to_set = [splits[2]]
+        elif self.mode == 'val_only':
+            datasets_to_prep = [pre_datasets[1]]
+            splits_to_prep = [splits[1]]
+            splits_to_set = [splits[1]]
         elif self.mode == 'full':
             datasets_to_prep = pre_datasets
             splits_to_prep = splits

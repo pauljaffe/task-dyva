@@ -15,7 +15,7 @@ scipy = "1.6.1"
 seaborn = "~0.11"
 PyYAML = "^5.4.1"
 sklearn = "^0.0"
-neptune-client = "^0.10.4"
+neptune-client = "^0.14.3"
 dill = "^0.3.4"
 
 [tool.poetry.dev-dependencies]
