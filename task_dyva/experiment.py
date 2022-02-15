@@ -524,7 +524,7 @@ class Experiment(nn.Module,
                                     device=self.device, requires_grad=False)
         self.anneal_param = torch.min(anneal_param, self._max_anneal)
 
-    def get_behavior_metrics(self, dataset, epoch, label, save_local=False, 
+    def get_behavior_metrics(self, dataset, save_fn, save_local=False, 
                              load_local=True, analyze_latents=False,
                              get_model_outputs=True, stats_dir=None,
                              **kwargs):
@@ -533,10 +533,8 @@ class Experiment(nn.Module,
         Args
         ----
         dataset (EbbFlowDataset instance): Dataset used to calculate stats.
-        epoch (int): Epoch number saved into the file name, otherwise
-            has no function.
-        label (str): A label to save into the file name, otherwise
-            has no function. 
+        save_fn (str): File name where behavior metrics are saved (should be
+            a .pkl file).
         save_local (Boolean, optional): Whether or not to save a local copy
             of the resulting stats object.
         load_local (Boolean, optional): Whether or not to reload a saved
@@ -557,8 +555,8 @@ class Experiment(nn.Module,
         """
 
         if stats_dir is None:
-            stats_dir = 'model_stats'
-        stats_path = os.path.join(self.base_dir, stats_dir, save_str)
+            stats_dir = 'model_analysis'
+        stats_path = os.path.join(self.base_dir, stats_dir, save_fn)
         if load_local:
             if os.path.exists(stats_path):
                 with open(stats_path, 'rb') as path:
@@ -591,7 +589,7 @@ class Experiment(nn.Module,
         stats = stats_obj.get_stats()
 
         if save_local:
-            os.makedirs(os.path.join(self.base_dir, 'model_stats'), 
+            os.makedirs(os.path.join(self.base_dir, stats_dir), 
                         exist_ok=True)
             with open(stats_path, 'wb') as path:
                 pickle.dump(stats_obj, path, protocol=4)
