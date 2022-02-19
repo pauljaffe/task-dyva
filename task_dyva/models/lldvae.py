@@ -214,7 +214,7 @@ class LLDVAE(nn.Module):
                             dim=2) * self._pw_params[1].size(-1)
         return self._pw_params[0], pw_vars
 
-    def forward(self, xu, generate_mode=False, clamp=False):
+    def forward(self, xu, generate_mode=False, clamp=False, z0_supplied=None):
         """Compute a forward pass of the model.
 
         Args
@@ -229,6 +229,9 @@ class LLDVAE(nn.Module):
         clamp (Boolean, optional): Only affects behavior if 
             generate_mode == True. If True, the noise variable w is 
             set to zero. If False, w is sampled from the prior. 
+        z0_supplied (PyTorch tensor, optional): Pass in user-defined
+            initial states to initialize the model. Used when 
+            finding fixed points.
 
         Returns
         -------
@@ -244,7 +247,13 @@ class LLDVAE(nn.Module):
         x_in = xu[:, :, :self.input_dim]
         u = xu[:, :, self.input_dim:]
         setup_vars = self._setup_propagate(xu, generate_mode, clamp)
-        w, z, w_means, w_vars = self._propagate(*setup_vars, u, generate_mode)
+        if z0_supplied is None:
+            w, z, w_means, w_vars = self._propagate(*setup_vars, u, 
+                                                    generate_mode)
+        else:
+            w, z, w_means, w_vars = self._propagate(z0_supplied, 
+                                                    *setup_vars[1:], u, 
+                                                    generate_mode)
         px_w = self.px_w(*self.decoder(z))
         return x_in, px_w, w, z, w_means, w_vars
 
