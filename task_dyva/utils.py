@@ -1,4 +1,5 @@
 import os
+import itertools
 
 import torch
 import numpy as np
@@ -168,7 +169,7 @@ def z_pca(z, n_keep, whiten=False):
     z_reduced = np.reshape(
             z_transformed, (T, N, z_dim), order='F')[:, :, :n_keep]
 
-    return z_reduced, z_var_exp
+    return z_reduced, z_var_exp, z_pca_obj
 
 
 def save_figure(fig, save_dir, fn, save_svg=True, save_png=True):
@@ -229,3 +230,10 @@ def expt_stats_to_df(metrics, expts, age_bins, stats):
             df = df.append(new_u_row, ignore_index=True)
             df = df.append(new_m_row, ignore_index=True) 
     return df
+
+
+def get_all_trial_combos():
+    all_combos = list(itertools.product([0, 1, 2, 3],
+                                        [0, 1, 2, 3],
+                                        [0, 1]))
+    return all_combos

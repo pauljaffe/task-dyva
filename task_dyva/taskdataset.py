@@ -334,11 +334,15 @@ class EbbFlowStats(EbbFlowDataset):
         self.t_axis = self.step * np.arange(-self.n_pre, self.n_post, 1) 
         if latents is not None:
             self.latents = latents.cpu().detach().numpy()
-            pca_latents, _ = z_pca(self.latents, n_pcs)
+            pca_latents, explained_var, pca_obj = z_pca(self.latents, n_pcs)
             self.pca_latents = pca_latents
+            self.pca_explained_var = explained_var
+            self.pca_obj = pca_obj
         else:
             self.latents = None
             self.pca_latents = None
+            self.pca_explained_var = None
+            self.pca_obj = None
         self.windowed = None
         self._get_trial_data()
 
