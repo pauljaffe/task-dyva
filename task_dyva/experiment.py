@@ -292,7 +292,6 @@ class Experiment(nn.Module,
 
     def _load_params_file(self):
         checkpoint_path = os.path.join(self.base_dir, self.params_to_load)
-                                       f'checkpoint_epoch{epoch}.pth')
         self.checkpoint = torch.load(checkpoint_path, 
                                      map_location=self.device)
 
