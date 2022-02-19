@@ -9,6 +9,7 @@ from manuscript.figure2 import Figure2
 from manuscript.figureS2 import FigureS2
 from manuscript.figureS3 import FigureS3
 from manuscript.figureS4 import FigureS4
+from manuscript.figureS5 import FigureS5
 
 
 # Plotting params
@@ -43,5 +44,8 @@ if rerun_preprocessing:
 #figS3 = FigureS3(model_dir, figure_dir, metadata)
 #figS3.make_figure()
 
-figS4 = FigureS4(model_dir, figure_dir, metadata)
-figS4.make_figure()
+#figS4 = FigureS4(model_dir, figure_dir, metadata)
+#figS4.make_figure()
+
+figS5 = FigureS5(model_dir, figure_dir, metadata)
+figS5.make_figure()
