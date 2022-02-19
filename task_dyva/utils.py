@@ -1,3 +1,5 @@
+import os
+
 import torch
 import numpy as np
 from scipy.stats import special_ortho_group
@@ -166,3 +168,12 @@ def z_pca(z, n_keep, whiten=False):
             z_transformed, (T, N, z_dim), order='F')[:, :, :n_keep]
 
     return z_reduced, z_var_exp
+
+
+def save_figure(fig, save_dir, fn, save_svg=True, save_png=True):
+    if save_svg:
+        svg_path = os.path.join(save_dir, f'{fn}.svg')
+        fig.savefig(svg_path, transparent=True, bbox_inches='tight')
+    if save_png:
+        png_path = os.path.join(save_dir, f'{fn}.png')
+        fig.savefig(png_path, bbox_inches='tight')
