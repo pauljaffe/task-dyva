@@ -2,7 +2,8 @@ import os
 
 import torch
 import numpy as np
-from scipy.stats import special_ortho_group
+import pandas as pd
+from scipy.stats import special_ortho_group, pearsonr
 from sklearn.decomposition import PCA
 
 
@@ -177,3 +178,48 @@ def save_figure(fig, save_dir, fn, save_svg=True, save_png=True):
     if save_png:
         png_path = os.path.join(save_dir, f'{fn}.png')
         fig.savefig(png_path, bbox_inches='tight')
+
+
+def plot_scatter(group_stats, params, ax, line_ext):
+    # Model vs. user scatter plotting utility
+    metric = params['metric']
+    u_key = f'u_{metric}'
+    m_key = f'm_{metric}'
+    u_vals = np.array(group_stats[u_key])
+    m_vals = np.array(group_stats[m_key])    
+    
+    # Plot best fit line
+    plot_x = np.array([min(u_vals) - line_ext, 
+                       max(u_vals) + line_ext])
+    m, b = np.polyfit(u_vals, m_vals, 1)
+    ax.plot(plot_x, m * plot_x + b, 'k-', zorder=1)
+    
+    # Plot all individuals
+    ax.scatter(u_vals, m_vals, s=6, marker='o', zorder=2, alpha=0.75)
+    ax.set_xlabel(f"Participant {params['label']}")
+    ax.set_ylabel(f"Model {params['label']}")
+    ax.set_xlim(params['ax_lims'])
+    ax.set_ylim(params['ax_lims'])
+
+    # Stats
+    r = pearsonr(u_vals, m_vals)
+    print(f'{metric} corr. coeff.: {r}')
+    print(f'{metric} slope: {m}; intercept: {b}') 
+
+
+def expt_stats_to_df(metrics, expts, age_bins, stats):
+    df = pd.DataFrame(
+        columns=['user', 'age_bin', 'metric', 'value', 'model_or_user'])
+    for expt, ab, stats in zip(expts, age_bins, stats):
+        for key in metrics:
+            u_key = 'u_{0}'.format(key)
+            m_key = 'm_{0}'.format(key)
+            u_val = stats.summary_stats[u_key]
+            m_val = stats.summary_stats[m_key]
+            new_u_row = {'user': expt, 'age_bin': ab, 'metric': key, 
+                         'value': u_val, 'model_or_user': 'Participants'}
+            new_m_row = {'user': expt, 'age_bin': ab, 'metric': key, 
+                         'value': m_val, 'model_or_user': 'Models'}
+            df = df.append(new_u_row, ignore_index=True)
+            df = df.append(new_m_row, ignore_index=True) 
+    return df

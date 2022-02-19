@@ -32,12 +32,12 @@ if rerun_preprocessing:
     preprocessing.run_preprocessing()
 
 # MAIN FIGURES
-#fig2 = Figure2(model_dir, figure_dir, metadata)
-#fig2.make_figure()
+fig2 = Figure2(model_dir, figure_dir, metadata)
+fig2.make_figure()
 
 # SUPPLEMENTAL FIGURES
 #figS2 = FigureS2(model_dir, figure_dir, metadata)
 #figS2.make_figure()
 
-figS3 = FigureS3(model_dir, figure_dir, metadata)
-figS3.make_figure()
+#figS3 = FigureS3(model_dir, figure_dir, metadata)
+#figS3.make_figure()

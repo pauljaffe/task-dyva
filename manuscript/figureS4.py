@@ -5,10 +5,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr
 
 from task_dyva.visualization import BarPlot
-from task_dyva.utils import save_figure
+from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df
 
 
 class FigureS4():
@@ -37,7 +36,6 @@ class FigureS4():
         self.analysis_expt_stats = []
         self.analysis_age_bins = []
         self.analysis_expt_strs = []
-        self.exemplars = {}
 
     def make_figure(self):
         print('Making Figure S4...')
@@ -68,13 +66,8 @@ class FigureS4():
             for key in self.group_stats.keys():
                 self.group_stats[key].append(expt_stats.summary_stats[key])
 
-            # Get stats from the example participants / models
-            if uid in self.exemplar_ids.keys():
-                self.exemplars[self.exemplar_ids[uid]] = expt_stats
-
     def _plot_figure_get_stats(self):
-        fig = plt.figure(constrained_layout=False, figsize=self.figsize)
-        gs = fig.add_gridspec(20, 18, wspace=20, hspace=2)
+        fig, axes = plt.subplots(1, 2, figsize=self.figsize)
 
         ######################################
         # Panels A-C: Example RT distributions

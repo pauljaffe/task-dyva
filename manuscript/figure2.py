@@ -5,10 +5,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr
 
 from task_dyva.visualization import PlotRTs, BarPlot
-from task_dyva.utils import save_figure
+from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df
 
 
 class Figure2():
@@ -108,33 +107,36 @@ class Figure2():
         #################################################
         # Panels D-F: Model vs. participant scatter plots
         #################################################
-
         # Panel D: Mean RT
         D_params = {'ax_lims': [600, 1250],
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
         D_ax = fig.add_subplot(gs[7:13, 0:6])
-        self._plot_scatter_get_stats(D_params, D_ax)
+        plot_scatter(self.group_stats, D_params, D_ax, self.line_ext)
 
         # Panel E: Switch cost
         E_params = {'ax_lims': [-25, 300],
                     'metric': 'switch_cost',
                     'label': 'switch cost (ms)'}
         E_ax = fig.add_subplot(gs[7:13, 6:12])
-        self._plot_scatter_get_stats(E_params, E_ax)
+        plot_scatter(self.group_stats, E_params, E_ax, self.line_ext)
         
         # Panel F: Congruency effect
         F_params = {'ax_lims': [0, 300],
                     'metric': 'con_effect',
                     'label': 'congruency effect (ms)'}
         F_ax = fig.add_subplot(gs[7:13, 12:18])
-        self._plot_scatter_get_stats(F_params, F_ax)
+        plot_scatter(self.group_stats, F_params, F_ax, self.line_ext)
 
         #################################################
         # Panels G-I: Model vs. participant binned by age
         #################################################
         error_type = 'sem'
-        stats_df = self._format_as_df()
+        metrics = ['mean_rt', 'switch_cost', 'con_effect']
+        stats_df = expt_stats_to_df(metrics,
+                                    self.analysis_expt_strs,
+                                    self.analysis_age_bins,
+                                    self.analysis_expt_stats)
 
         # Panel G: Mean RT
         G_df = stats_df.query("metric == 'mean_rt'")
@@ -194,49 +196,3 @@ class Figure2():
                 ax.set_ylabel('RT (ms)')
             else:
                 ax.get_legend().remove()
-
-    def _plot_scatter_get_stats(self, params, ax):
-        metric = params['metric']
-        u_key = f'u_{metric}'
-        m_key = f'm_{metric}'
-        u_vals = np.array(self.group_stats[u_key])
-        m_vals = np.array(self.group_stats[m_key])    
-        
-        # Plot best fit line
-        plot_x = np.array([min(u_vals) - self.line_ext, 
-                           max(u_vals) + self.line_ext])
-        m, b = np.polyfit(u_vals, m_vals, 1)
-        ax.plot(plot_x, m * plot_x + b, 'k-', zorder=1)
-        
-        # Plot all individuals
-        ax.scatter(u_vals, m_vals, s=6, marker='o', zorder=2, alpha=0.75)
-        ax.set_xlabel(f"Participant {params['label']}")
-        ax.set_ylabel(f"Model {params['label']}")
-        ax.set_xlim(params['ax_lims'])
-        ax.set_ylim(params['ax_lims'])
-
-        # Stats
-        r = pearsonr(u_vals, m_vals)
-        print(f'{metric} corr. coeff.: {r}')
-        print(f'{metric} slope: {m}; intercept: {b}') 
-
-    def _format_as_df(self):
-        metrics = ['mean_rt', 'switch_cost', 'con_effect']
-        df = pd.DataFrame(
-            columns=['user', 'age_bin', 'metric', 'value', 'model_or_user'])
-
-        for expt, ab, stats in zip(self.analysis_expt_strs,
-                                   self.analysis_age_bins,
-                                   self.analysis_expt_stats):
-            for key in metrics:
-                u_key = 'u_{0}'.format(key)
-                m_key = 'm_{0}'.format(key)
-                u_val = stats.summary_stats[u_key]
-                m_val = stats.summary_stats[m_key]
-                new_u_row = {'user': expt, 'age_bin': ab, 'metric': key, 
-                             'value': u_val, 'model_or_user': 'Participants'}
-                new_m_row = {'user': expt, 'age_bin': ab, 'metric': key, 
-                             'value': m_val, 'model_or_user': 'Models'}
-                df = df.append(new_u_row, ignore_index=True)
-                df = df.append(new_m_row, ignore_index=True) 
-        return df
