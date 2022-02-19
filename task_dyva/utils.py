@@ -207,7 +207,7 @@ def plot_scatter(group_stats, params, ax, line_ext):
     m_mean = np.mean(m_vals)
     u_sem = np.std(u_vals) / np.sqrt(len(u_vals))
     m_sem = np.std(m_vals) / np.sqrt(len(m_vals))
-    print(f'{metric} corr. coeff.: {r}')
+    print(f'{metric} corr. coeff.: {r[0]}, p = {r[1]}')
     print(f'{metric} slope: {m}; intercept: {b}') 
     print(f'Participant {metric} mean +/- s.e.m.: {u_mean} +/- {u_sem}')
     print(f'Model {metric} mean +/- s.e.m.: {m_mean} +/- {m_sem}')
