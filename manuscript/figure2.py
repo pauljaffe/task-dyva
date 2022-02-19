@@ -145,7 +145,7 @@ class Figure2():
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': True}
         G_ax = fig.add_subplot(gs[14:20, 0:6])
-        G_bar = BarPlot(G_df, self.palette)
+        G_bar = BarPlot(G_df)
         G_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
                                error_type, G_ax, **G_params)
 
@@ -157,7 +157,7 @@ class Figure2():
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': False}
         H_ax = fig.add_subplot(gs[14:20, 6:12])
-        H_bar = BarPlot(H_df, self.palette)
+        H_bar = BarPlot(H_df)
         H_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
                                error_type, H_ax, **H_params)
 
@@ -168,7 +168,7 @@ class Figure2():
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': False}
         I_ax = fig.add_subplot(gs[14:20, 12:18])
-        I_bar = BarPlot(I_df, self.palette)
+        I_bar = BarPlot(I_df)
         I_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
                                error_type, I_ax, **I_params)
 

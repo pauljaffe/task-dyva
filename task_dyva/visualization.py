@@ -86,9 +86,8 @@ class BarPlot():
 
     supported_error = {'sem', 'sd'}
 
-    def __init__(self, df, palette):
+    def __init__(self, df):
         self.df = df
-        self.palette = palette
 
     def plot_grouped_bar(self, x, y, hue, error_type, ax, **kwargs):
         # Note: Currently this only supports plotting two groups
