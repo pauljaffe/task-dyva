@@ -7,6 +7,14 @@ from .taskdataset import EbbFlowStats
 
 
 class PlotRTs(EbbFlowStats):
+    """Plot RT distributions.
+
+    Args
+    ----
+    stats_obj (EbbFlowStats instance): data from the model/participant.
+
+    """
+
 
     def __init__(self, stats_obj):
         # stats_obj is an EbbFlowStats instance
@@ -81,7 +89,11 @@ class PlotRTs(EbbFlowStats):
 
 class BarPlot():
     """Plot seaborn style barplots, but allow plotting of
-    s.e.m. error bars.
+    s.e.m. error bars. See e.g. figure2.py for usage. 
+
+    Args
+    ----
+    df (pandas DataFrame): Data to plot. 
     """
 
     supported_error = {'sem', 'sd'}
