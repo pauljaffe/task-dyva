@@ -15,7 +15,8 @@ class FigureS5():
     """
 
     analysis_dir = 'model_analysis'
-    stats_fn = 'holdout_outputs_04SD.pkl'
+    stats_fn = 'behavior_summary.pkl'
+    noise_key = '04'
     figsize = (16, 4.5)
     line_ext = 10
 
@@ -57,7 +58,7 @@ class FigureS5():
             with open(stats_path, 'rb') as path:
                 expt_stats = pickle.load(path)
             for key in self.group_stats.keys():
-                self.group_stats[key].append(expt_stats.summary_stats[key])
+                self.group_stats[key].append(expt_stats[noise_key][key])
 
     def _plot_figure_get_stats(self):
         fig, axes = plt.subplots(1, 3, figsize=self.figsize)

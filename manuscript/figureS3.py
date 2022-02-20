@@ -16,6 +16,7 @@ class FigureS3():
     """
 
     analysis_dir = 'model_analysis'
+    stats_fn = 'behavior_summary.pkl'
     figsize = (6, 8)
 
     noise_labels = ['01', '015', '02', '025', '03', '035', '04', '045',
@@ -61,16 +62,13 @@ class FigureS3():
             if sc == 'sc-':
                 continue
             
+            stats_path = os.path.join(self.model_dir, expt_str, 
+                                      self.analysis_dir, self.stats_fn)
+            with open(stats_path, 'rb') as path:
+                this_stats = pickle.load(path)
             for noise in self.noise_labels:
-                this_save_str = f'holdout_outputs_{noise}SD.pkl'
-                stats_path = os.path.join(self.model_dir, expt_str, 
-                                          self.analysis_dir, this_save_str)
-                with open(stats_path, 'rb') as path:
-                    this_stats = pickle.load(path)
-
                 for key in self.stats_dict.keys():
-                    self.all_stats[noise][key].append(
-                        this_stats.summary_stats[key])
+                    self.all_stats[noise][key].append(this_stats[noise][key])
 
     def _plot_figure_get_stats(self):
         fig, axes = plt.subplots(3, 1, figsize=self.figsize)
