@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import pdb
 
 from .taskdataset import EbbFlowStats
 
@@ -12,15 +13,12 @@ class PlotRTs(EbbFlowStats):
     Args
     ----
     stats_obj (EbbFlowStats instance): data from the model/participant.
-
+    palette (str, optional): Color palette used for plotting.
     """
 
-
-    def __init__(self, stats_obj):
-        # stats_obj is an EbbFlowStats instance
-
+    def __init__(self, stats_obj, palette='viridis'):
         self.__dict__ = stats_obj.__dict__
-        self.palette = 'viridis'
+        self.palette = palette
 
     def plot_rt_dists(self, ax, plot_type):
         if plot_type == 'all':
@@ -89,30 +87,31 @@ class PlotRTs(EbbFlowStats):
 
 class BarPlot():
     """Plot seaborn style barplots, but allow plotting of
-    s.e.m. error bars. See e.g. figure2.py for usage. 
+    s.e.m. error bars. See figure2.py and figure3.py for usage.
 
     Args
     ----
     df (pandas DataFrame): Data to plot. 
+    palette (str, optional): Color palette used for plotting.
     """
 
     supported_error = {'sem', 'sd'}
 
-    def __init__(self, df):
+    def __init__(self, df, palette='viridis'):
         self.df = df
+        self.palette = palette
 
     def plot_grouped_bar(self, x, y, hue, error_type, ax, **kwargs):
         # Note: Currently this only supports plotting two groups
         # (designated by the hue argument)
         assert error_type in self.supported_error, \
-               'error_type must be one of the following: ' \
-               f'{self.supported_error}'
+           'error_type must be one of the following: ' \
+           f'{self.supported_error}'
         colors = [(0.2363, 0.3986, 0.5104, 1.0),
                   (0.2719, 0.6549, 0.4705, 1.0)]
         width = kwargs.get('width', 0.35)
         x_offset = -width / 2
         hue_types = self.df[hue].unique()
-
         for i, h in enumerate(hue_types):
             group_df = self.df.query(f'{hue} == @h')
             group_means, group_errors = self._get_group_data(
@@ -121,8 +120,22 @@ class BarPlot():
             ax.bar(plot_x + x_offset, group_means, yerr=group_errors,
                    width=width, label=h, **{'fc': colors[i]})
             x_offset += width
-
         self._adjust_bar(plot_x, ax, **kwargs)
+
+    def plot_bar(self, keys, error_type, ax, **kwargs):
+        assert error_type in self.supported_error, \
+           'error_type must be one of the following: ' \
+           f'{self.supported_error}'
+        colors = sns.color_palette(palette=self.palette, n_colors=len(x),
+                                   as_cmap=True)
+        width = kwargs.get('width', 0.35)
+        plot_data = [self.df[key] for key in keys]
+        for di, d in enumerate(plot_data):
+            d_mean = np.mean(d)
+            d_sem = np.std(d) / np.sqrt(len(d))
+            ax.bar(di, d_mean, d_sem, width=width, **{'fc': colors[di]})
+            pdb.set_trace()
+        self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
 
     def _get_group_data(self, group_df, x, y, error_type):
         means = group_df.groupby(x)[y].mean().to_numpy()
@@ -138,6 +151,8 @@ class BarPlot():
         ax.set_xticks(plot_x)
         ax.set_xticklabels(kwargs.get('xticklabels', None),
                            rotation=45, ha='right', rotation_mode='anchor')
+        ax.set_yticks(kwargs.get('yticks'))
+        ax.set_xlim(kwargs.get('xlim', None)
         ax.set_ylim(kwargs.get('ylim', None))
         if kwargs.get('plot_legend', False):
             ax.legend()
