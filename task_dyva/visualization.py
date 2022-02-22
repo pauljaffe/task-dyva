@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
-import pdb
 
 from .taskdataset import EbbFlowStats
 
@@ -120,22 +119,22 @@ class BarPlot():
             ax.bar(plot_x + x_offset, group_means, yerr=group_errors,
                    width=width, label=h, **{'fc': colors[i]})
             x_offset += width
-        self._adjust_bar(plot_x, ax, **kwargs)
+        ax = self._adjust_bar(plot_x, ax, **kwargs)
+        return ax
 
     def plot_bar(self, keys, error_type, ax, **kwargs):
         assert error_type in self.supported_error, \
            'error_type must be one of the following: ' \
            f'{self.supported_error}'
-        colors = sns.color_palette(palette=self.palette, n_colors=len(x),
-                                   as_cmap=True)
-        width = kwargs.get('width', 0.35)
+        colors = sns.color_palette(palette=self.palette, n_colors=len(keys))
+        width = kwargs.get('width', 0.5)
         plot_data = [self.df[key] for key in keys]
         for di, d in enumerate(plot_data):
             d_mean = np.mean(d)
             d_sem = np.std(d) / np.sqrt(len(d))
-            ax.bar(di, d_mean, d_sem, width=width, **{'fc': colors[di]})
-            pdb.set_trace()
-        self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
+            ax.bar(di, d_mean, yerr=d_sem, width=width, **{'fc': colors[di]})
+        ax = self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
+        return ax
 
     def _get_group_data(self, group_df, x, y, error_type):
         means = group_df.groupby(x)[y].mean().to_numpy()
@@ -152,7 +151,123 @@ class BarPlot():
         ax.set_xticklabels(kwargs.get('xticklabels', None),
                            rotation=45, ha='right', rotation_mode='anchor')
         ax.set_yticks(kwargs.get('yticks'))
-        ax.set_xlim(kwargs.get('xlim', None)
+        ax.set_xlim(kwargs.get('xlim', None))
         ax.set_ylim(kwargs.get('ylim', None))
         if kwargs.get('plot_legend', False):
             ax.legend()
+        return ax
+
+
+class PlotModelLatents():
+    """DOC"""
+    
+    default_colors = 2 * ['royalblue', 'forestgreen', 'crimson', 'orange']
+
+    def __init__(self, data, post_on_dur=1200, pcs_to_plot=[0, 1, 2],
+                 fixed_points=None):
+        self.data = data
+        self.pcs_to_plot = pcs_to_plot
+        self.latents = data.windowed['pca_latents'][:, :, pcs_to_plot]
+        self.m_rts = data.df['mrt_ms'].to_numpy()
+        self.step = data.step
+        self.n_pre = data.n_pre
+        self.t_off_ind = self.n_pre + np.round(post_on_dur / self.step).astype('int')
+        self.fixed_points = fixed_points
+
+    def plot_3d(self, series, labels, ax, elev=30, azim=60, **kwargs):
+        # TODO: add doc
+        colors = kwargs.get('colors', self.default_colors)
+        line_styles = kwargs.get('line_styles', len(series) * ['-']) 
+        width = kwargs.get('line_width', 0.5)
+        rt_marker = kwargs.get('rt_marker', 'o')
+        if kwargs.get('plot_task_onset', False):
+            ax = self._plot_task_centroid(ax, series, 'onset', **kwargs)
+        if kwargs.get('plot_task_rt_centroid', False):
+            ax = self._plot_task_centroid(ax, series, 'rt', **kwargs)
+        plot_series_onset = kwargs.get('plot_series_onset', False)
+        plot_series_rt = kwargs.get('plot_series_rt', False)
+
+        for i, s in enumerate(series):
+            label = labels[i]
+            color = colors[i]
+            style = line_styles[i]
+            ax = self._plot_3d_line(ax, s, color, style, label, width)
+            if plot_series_onset:
+                ax = self._mark_3d_plot(ax, s, self.n_pre, 'k', 10, '.')
+            if plot_series_rt:
+                t_ind = self._get_series_rt_samples(s)
+                ax = self._mark_3d_plot(ax, s, t_ind, color, 6, 'o')
+
+        if self.fixed_points is not None:
+            ax = self._plot_fixed_points(ax)
+        ax = self._adjust_plot(ax, elev, azim, **kwargs)
+        return ax
+
+    def _get_series_rt_samples(self, series):
+        rt = np.round(np.mean(self.m_rts[series]) / self.step).astype('int')
+        return rt
+
+    def _plot_task_centroid(self, ax, series, centroid_type, **kwargs):
+        color, size = 'k', 10
+        mv_inds = np.concatenate([
+            series[i] for i in kwargs['mv_series_inds']])
+        pt_inds = np.concatenate([
+            series[i] for i in kwargs['pt_series_inds']])
+        for inds in [mv_inds, pt_inds]:
+            if centroid_type == 'onset':
+                marker = '.'
+                t_ind = self.n_pre
+            elif centroid_type == 'rt':
+                marker = 'd'
+                t_ind = self._get_series_rt_samples(inds)
+            ax = self._mark_3d_plot(ax, inds, t_ind, color, size, marker)
+        return ax
+
+    def _mark_3d_plot(self, ax, series_inds, t_ind, color, size, marker):
+        x = np.mean(self.latents[:self.t_off_ind, series_inds, 0], 1)
+        y = np.mean(self.latents[:self.t_off_ind, series_inds, 1], 1)
+        z = np.mean(self.latents[:self.t_off_ind, series_inds, 2], 1)
+        ax.scatter(x[t_ind], y[t_ind], z[t_ind], marker=marker,
+                   edgecolors=color, facecolors=color, s=size,
+                   linewidth=0.5, label=None)
+        return ax
+
+    def _plot_3d_line(self, ax, series_inds, color, style, label, width):
+        x = np.mean(self.latents[:self.t_off_ind, series_inds, 0], 1)
+        y = np.mean(self.latents[:self.t_off_ind, series_inds, 1], 1)
+        z = np.mean(self.latents[:self.t_off_ind, series_inds, 2], 1)
+        ax.plot(x, y, z, color=color, label=label, linestyle=style, 
+                linewidth=width)
+        return ax
+
+    def _plot_fixed_points(self, ax):
+        mv_fps = self.fixed_points.query('cue == 0')
+        pt_fps = self.fixed_points.query('cue == 1')
+        plot_fps = [mv_fps, pt_fps]
+        fp_markers = ['x', 'x']
+        colors = ['crimson', 'royalblue']
+        size = 10
+        for plot_fp, mark, c in zip(plot_fps, fp_markers, colors):
+            for fpz in plot_fp['zloc_pca']:
+                ax.scatter(fpz[0], fpz[1], fpz[2], s=size, color=c, 
+                           marker=mark, zorder=2, linewidth=0.5)
+        return ax
+
+    def _adjust_plot(self, ax, elev, azim, **kwargs):
+        ax.view_init(elev=elev, azim=azim)
+        ax.set_xlabel(f'PC {self.pcs_to_plot[0] + 1}')
+        ax.set_ylabel(f'PC {self.pcs_to_plot[1] + 1}')
+        ax.set_zlabel(f'PC {self.pcs_to_plot[2] + 1}')
+        ax.set_title(kwargs.get('title', None))
+        ax.yaxis._axinfo['grid']['linewidth'] = 0.5
+        ax.xaxis._axinfo['grid']['linewidth'] = 0.5
+        legend_loc = kwargs.get('legend_loc', (0.9, 0.9))
+        ax.legend(bbox_to_anchor=legend_loc, ncol=2)
+        ax.set_xlim(kwargs.get('xlim', None))
+        ax.set_ylim(kwargs.get('ylim', None))
+        ax.set_zlim(kwargs.get('zlim', None))
+        if kwargs.get('remove_tick_labels', True):
+            ax.set_xticklabels('')
+            ax.set_yticklabels('')
+            ax.set_zticklabels('')
+        return ax
