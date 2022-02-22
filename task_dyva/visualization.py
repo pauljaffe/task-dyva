@@ -11,7 +11,7 @@ class PlotRTs(EbbFlowStats):
 
     Args
     ----
-    stats_obj (EbbFlowStats instance): data from the model/participant.
+    stats_obj (EbbFlowStats instance): Data from the model/participant.
     palette (str, optional): Color palette used for plotting.
     """
 
@@ -159,7 +159,16 @@ class BarPlot():
 
 
 class PlotModelLatents():
-    """DOC"""
+    """Plot the model latents in 3D. See e.g. figure3.py and 
+    figure4.py for usage.
+
+    Args
+    ----
+    data (EbbFlowStats instance): Data to plot.
+    post_on_dur (int, optional): Duration after stimulus onset to plot (ms).
+    pcs_to_plot (list, optional): Which PCs to plot. 
+    fixed_points (pandas DataFrame, optional): Fixed points to plot. 
+    """
     
     default_colors = 2 * ['royalblue', 'forestgreen', 'crimson', 'orange']
 
@@ -175,7 +184,8 @@ class PlotModelLatents():
         self.fixed_points = fixed_points
 
     def plot_3d(self, series, labels, ax, elev=30, azim=60, **kwargs):
-        # TODO: add doc
+        # series should be a list of numpy arrays: the model latents
+        # are averaged over each array of indices, then plotted. 
         colors = kwargs.get('colors', self.default_colors)
         line_styles = kwargs.get('line_styles', len(series) * ['-']) 
         width = kwargs.get('line_width', 0.5)
