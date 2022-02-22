@@ -61,10 +61,10 @@ class FixedPointFinder():
                 fp_df = pd.concat(all_fps)
                 fps = self._project_fps(fp_df)
                 fps.reset_index(drop=True, inplace=True)
-                fps.to_pickle(self.fp_path)
             else:
-                fps = None
-
+                fps = pd.DataFrame({'type': [], 'zloc': [],
+                                    'cue': [], 'mv': [], 'pt': []})
+            fps.to_pickle(self.fp_path)
         return fps
 
     def get_fixed_point_summary(self, fps):
@@ -72,10 +72,10 @@ class FixedPointFinder():
         if os.path.exists(self.fp_summary_path) and self.load_saved:
             with open(self.fp_summary_path, 'rb') as path:
                 summary = pickle.load(path)
-        elif fps is None:
-            summary = {'within_task': np.nan, 'between_task': np.nan,
-                       'same_response': np.nan, 'different_response': np.nan,
-                       'N': 0, 'f_stimuli_with_fp': np.nan}
+        elif len(fps) == 0:
+            summary = {'within_task': [], 'between_task': [],
+                       'same_response': [], 'different_response': [],
+                       'N': 0, 'f_stimuli_with_fp': 0}
         else:
             summary = {'within_task': [], 'between_task': [],
                        'same_response': [], 'different_response': []}
