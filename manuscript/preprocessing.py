@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from task_dyva import Experiment
-from task_dyva.model_analysis import FixedPointFinder
+from task_dyva.model_analysis import FixedPointFinder, LatentsLDA
 
 
 class Preprocess():
@@ -21,6 +21,7 @@ class Preprocess():
     device = 'cpu'
     raw_fn = 'data_pre_split.pickle'
     params_fn = 'model_params.pth'
+    rand_seed = 12345 # Enforce reproducibility
 
     # Noise conditions
     acc_noise_sds = np.arange(0.1, 0.65, 0.05)
@@ -39,17 +40,25 @@ class Preprocess():
 
     # Fixed point params
     fp_fn = 'fixed_points.pkl'
-    fp_rand_seed = 12345 # Enforce reproducibility
+    fp_summary_fn = 'fixed_point_summary.pkl'
     fp_N = 10
     fp_T = 50000
 
+    # LDA params
+    lda_fn = 'lda_summary.pkl'
+    lda_time_range = [-100, 1600]
+    lda_n_shuffle = 1000
+
     def __init__(self, model_dir, metadata, reload_primary_outputs=True,
-                 reload_behavior_summary=True):
+                 reload_behavior_summary=True, reload_fixed_points=True,
+                 reload_lda_summary=True):
         self.model_dir = model_dir
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']
         self.reload_primary = reload_primary_outputs
         self.reload_behavior = reload_behavior_summary
+        self.reload_fixed_points = reload_fixed_points
+        self.reload_lda_summary = reload_lda_summary
 
     def run_preprocessing(self):
         for expt_str, model_type in zip(self.expts, 
@@ -58,36 +67,16 @@ class Preprocess():
             this_model_dir = os.path.join(self.model_dir, expt_str)
 
             # Get model outputs used for the bulk of analyses (0.1SD noise)
-            primary_stats_path = os.path.join(this_model_dir,
-                                              self.analysis_dir,
-                                              self.primary_outputs_fn)
-            if self.reload_primary and os.path.exists(primary_stats_path):
-                pass
-            else:
-                expt, expt_stats = self._get_model_outputs(this_model_dir, 
-                                                           expt_str,
-                                                           self.primary_noise_key, 
-                                                           self.primary_noise_sd)
+            self._primary_outputs_wrapper(this_model_dir, expt_str)
 
-            # Generate model outputs with different levels of noise;
-            # get a summary of model/participant behavior
-            behavior_summary_path = os.path.join(this_model_dir,
-                                                 self.analysis_dir,
-                                                 self.behavior_summary_fn)
-            if self.reload_behavior and os.path.exists(behavior_summary_path):
-                pass
-            else:
-                self._get_behavior_summary(this_model_dir, expt_str, model_type)
+            # Get model / participant behavior at all noise levels
+            self._behavior_wrapper(this_model_dir, expt_str, model_type)
 
-            #if noise_key == '01':
-                # Find fixed points
-                #this_fp_path = os.path.join(this_model_dir,
-                #                            self.analysis_dir,
-                #                            self.fp_fn)
-                #fpf = FixedPointFinder(expt, expt_stats, this_fp_path,
-                #                       load_saved=self.load_saved_fps,
-                #                       rand_seed=self.fp_rand_seed)
-                #fpf.find_fixed_points(self.fp_N, self.fp_T)
+            # Find stable fixed points
+            self._fp_wrapper(this_model_dir, expt_str, model_type)
+
+            # LDA analyses
+            self._lda_wrapper(this_model_dir, expt_str, model_type)
 
     def _get_model_outputs(self, model_dir, expt_str, 
                            noise_key, noise_sd, try_reload=False):
@@ -99,8 +88,7 @@ class Preprocess():
                        'mode': 'testing', 
                        'params_to_load': self.params_fn}
 
-        if noise_key == '01':
-            # Noise level used for training
+        if noise_key == self.primary_noise_key:
             analyze_latents = True
         else:
             analyze_latents = False
@@ -156,3 +144,69 @@ class Preprocess():
                 fn = os.path.join(model_dir, self.analysis_dir,
                                   f'holdout_outputs_{key}SD.pkl')
                 os.remove(fn)
+
+    def _primary_outputs_wrapper(self, model_dir, expt_str):
+        primary_stats_path = os.path.join(model_dir,
+                                          self.analysis_dir,
+                                          self.primary_outputs_fn)
+        if self.reload_primary and os.path.exists(primary_stats_path):
+            pass
+        else:
+            _, _ = self._get_model_outputs(model_dir, 
+                                           expt_str,
+                                           self.primary_noise_key, 
+                                           self.primary_noise_sd)
+
+    def _behavior_wrapper(self, model_dir, expt_str, model_type): 
+        behavior_summary_path = os.path.join(model_dir,
+                                             self.analysis_dir,
+                                             self.behavior_summary_fn)
+        if self.reload_behavior and os.path.exists(behavior_summary_path):
+            pass
+        else:
+            self._get_behavior_summary(model_dir, expt_str, model_type)
+
+    def _fp_wrapper(self, model_dir, expt_str, model_type):
+        fp_path = os.path.join(model_dir,
+                               self.analysis_dir,
+                               self.fp_fn)
+        fp_summary_path = os.path.join(model_dir,
+                                       self.analysis_dir,
+                                       self.fp_summary_fn)
+        if (self.reload_fixed_points and os.path.exists(fp_path)
+                and os.path.exists(fp_summary_path)):
+            pass
+        elif model_type == 'sc-':
+            pass
+        else:
+            expt, expt_stats = self._get_model_outputs(model_dir, 
+                                                       expt_str,
+                                                       self.primary_noise_key, 
+                                                       self.primary_noise_sd,
+                                                       try_reload=True)
+            fpf = FixedPointFinder(expt, expt_stats, fp_path,
+                                   fp_summary_path,
+                                   load_saved=False,
+                                   rand_seed=self.rand_seed)
+            this_fps = fpf.find_fixed_points(self.fp_N, self.fp_T)
+            fp_summary = fpf.get_fixed_point_summary(this_fps)
+
+    def _lda_wrapper(self, model_dir, expt_str, model_type):
+        lda_path = os.path.join(model_dir,
+                                self.analysis_dir,
+                                self.lda_fn)
+        if self.reload_lda_summary and os.path.exists(lda_path):
+            pass
+        elif model_type == 'sc-':
+            pass
+        else:
+            _, expt_stats = self._get_model_outputs(model_dir, 
+                                                    expt_str,
+                                                    self.primary_noise_key, 
+                                                    self.primary_noise_sd,
+                                                    try_reload=True)
+            lda = LatentsLDA(expt_stats, lda_path, load_saved=False,
+                             time_range=self.lda_time_range,
+                             n_shuffle=self.lda_n_shuffle,
+                             rand_seed=self.rand_seed)
+            lda_summary = lda.run_lda_analysis()

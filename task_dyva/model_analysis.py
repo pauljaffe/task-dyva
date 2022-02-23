@@ -28,7 +28,6 @@ class FixedPointFinder():
         self.max_sd_tol = max_sd_tol
         self.max_dist_tol = max_dist_tol
         self.stimulus_combos = get_all_trial_combos()
-        # Enforce reproducibility
         self.rng = np.random.default_rng(rand_seed)
 
     def find_fixed_points(self, N, T):
@@ -118,7 +117,7 @@ class FixedPointFinder():
             correct_dir1 = mv1
         else:
             correct_dir1 = pt1
-        if cue2 == 0: # moving task
+        if cue2 == 0:
             correct_dir2 = mv2
         else:
             correct_dir2 = pt2
@@ -203,3 +202,146 @@ class FixedPointFinder():
             fps_proj.append(this_proj[0][:keep_dim])
         fps['zloc_pca'] = fps_proj
         return fps
+
+
+class LatentsLDA():
+    def __init__(self, expt_stats, save_path, load_saved=True, 
+                 time_range=[-100, 1600], n_shuffle=1000, rand_seed=12345):
+        self.expt_stats = expt_stats
+        self.save_path = save_path
+        self.load_saved = load_saved
+        mean_rt = self.expt_stats.summary_stats['m_mean_rt']
+        self.t_ind = np.argmin(np.absolute(self.expt_stats.t_axis - mean_rt))
+        self.n_shuffle = n_shuffle
+        self.rng = np.random.default_rng(rand_seed)
+        self._split_trials_by_task()
+        self._split_trials_by_direction()
+
+    def _split_trials_by_direction(self):
+        direction_inds = {'mv': {}, 'pt': {}}
+        for cue_ind, cue in enumerate(['mv', 'pt']):
+            for d in [0, 1, 2, 3]:
+                this_filt = {'task_cue': cue_ind}
+                if cue_ind == 0:
+                    this_filt['mv_dir'] = d
+                else:
+                    this_filt['point_dir'] = d
+                this_inds = self.expt_stats.select(**this_filt)
+                direction_inds[cue][d] = this_inds
+        self.direction_inds = direction_inds
+
+    def _split_trials_by_task(self):
+        mv_filt = {'task_cue': 0}
+        pt_filt = {'task_cue': 1}
+        mv_inds = self.expt_stats.select(**mv_filt)
+        pt_inds = self.expt_stats.select(**pt_filt)
+        mv_rs_inds, pt_rs_inds = self._balance_task_N(mv_inds, pt_inds)
+        self.mv_z = np.squeeze(self.expt_stats.windowed['latents'][
+            self.t_ind, mv_rs_inds, :])
+        self.pt_z = np.squeeze(self.expt_stats.windowed['latents'][
+            self.t_ind, pt_rs_inds, :])
+        self.mv_N = len(mv_rs_inds)
+        self.pt_N = len(pt_rs_inds)
+        self.task_y = np.hstack((np.zeros(self.mv_N), 
+                                 np.ones(self.pt_N))) 
+        self.task_x = np.concatenate((self.mv_z, self.pt_z), axis=0)
+
+    def _balance_task_N(self, mv_inds, pt_inds):
+        if len(mv_inds) > len(pt_inds):
+            mv_rs_inds = mv_inds[self.rng.choice(len(mv_inds), len(pt_inds), 
+                                                 replace=False)]
+            pt_rs_inds = pt_inds
+        elif len(pt_inds) > len(mv_inds):
+            pt_rs_inds = pt_inds[self.rng.choice(len(pt_inds), len(mv_inds), 
+                                                 replace=False)]
+            mv_rs_inds = mv_inds
+        else:
+            pt_rs_inds = pt_inds
+            mv_rs_inds = mv_inds
+        return mv_rs_inds, pt_rs_inds
+
+    def _get_lda_error(self, x, y):
+        this_lda = LDA()
+        _ = this_lda.fit(x, y)
+        return 1 - this_lda.score(x, y)
+
+    def run_lda_analysis(self):
+        if os.path.exists(self.save_path) and self.load_saved:
+            with open(self.save_path, 'rb') as path:
+                lda_info = pickle.load(path)
+        else:
+            # True between task error
+            bw_error = self._get_lda_error(self.task_x, self.task_y)
+
+            # Between task error calculated on shuffled data
+            bw_shuffle_error = self._get_shuffle_error(
+                self.mv_z, self.pt_z, y=self.task_y)
+
+            # Within task (same vs. different direction)
+            # Average errors across all combinations
+            cues = ['mv', 'pt']
+            directions = [0, 1, 2, 3]
+            true_within_errors = []
+            shuffle_within_errors = []
+            for cue in cues:
+                for d in directions:
+                    x1_inds = self.direction_inds[cue][d]
+                    if len(x1_inds) < 2:
+                        print(f'Skipped LDA for cue {cue}, dir {d} with N = {len(x1_inds)}!')
+                        continue
+                    all_x2_inds = []
+                    other_d = [i for i in directions if i != d]
+                    for od in other_d:
+                        all_x2_inds.extend(self.direction_inds[cue][od])
+                    # Balance sample size
+                    all_x2_inds = np.array(all_x2_inds)
+                    x2_inds = all_x2_inds[self.rng.choice(len(all_x2_inds), len(x1_inds), 
+                                                          replace=False)]
+                    this_x1 = np.squeeze(self.expt_stats.windowed['latents'][
+                        self.t_ind, x1_inds, :])
+                    this_x2 = np.squeeze(self.expt_stats.windowed['latents'][
+                        self.t_ind, x2_inds, :])
+                    this_x = np.concatenate((this_x1, this_x2), axis=0)
+                    this_y = np.hstack((np.zeros(len(x1_inds)), 
+                                        np.ones(len(x2_inds)))) 
+
+                    # True within task error
+                    true_within_errors.append(self._get_lda_error(this_x, this_y))
+
+                    # Within task error calculated on shuffled data
+                    shuffle_within_errors.append(self._get_shuffle_error(
+                        this_x1, this_x2, between_task=False))
+
+            within_error = np.mean(true_within_errors)
+            within_shuffle_error = np.mean(shuffle_within_errors)
+            lda_info = {'bw_error': bw_error, 
+                        'bw_shuffle_error': bw_shuffle_error,
+                        'within_error': within_error, 
+                        'within_shuffle_error': within_shuffle_error}
+            with open(self.save_path, 'wb') as path:
+                pickle.dump(lda_info, path, protocol=4)
+        return lda_info
+
+    def _get_shuffle_error(self, x1, x2, between_task=True, y=None):
+        shuffle_errors = []
+        combined_data = np.concatenate((x1, x2), 0)
+        N1 = x1.shape[0]
+        N2 = x2.shape[0]
+        all_inds = np.arange(N1 + N2)
+        for n in range(self.n_shuffle):
+            this_x1_inds = self.rng.choice(N1 + N2, N1, replace=False)
+            if between_task:
+                this_x2_inds = np.setdiff1d(all_inds, this_x1_inds)
+                this_y = y
+            else: # Balance sample size
+                all_x2_inds = np.setdiff1d(all_inds, this_x1_inds)
+                x2_rand_inds = self.rng.choice(N2, N1, replace=False)
+                this_x2_inds = all_x2_inds[x2_rand_inds]
+                this_y = np.hstack((np.zeros(len(this_x1_inds)), 
+                                    np.ones(len(this_x2_inds)))) 
+            this_x1 = combined_data[this_x1_inds, :]
+            this_x2 = combined_data[this_x2_inds, :]
+            this_x = np.concatenate((this_x1, this_x2), axis=0)
+            shuffle_errors.append(self._get_lda_error(this_x, this_y))
+        shuffle_mean = np.mean(shuffle_errors)
+        return shuffle_mean
