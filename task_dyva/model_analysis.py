@@ -5,6 +5,7 @@ import itertools
 import torch
 import numpy as np
 import pandas as pd
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
 from .utils import get_all_trial_combos
 
@@ -194,7 +195,7 @@ class FixedPointFinder():
         return new_fp
 
     def _project_fps(self, fps, keep_dim=3):
-        # Project the fixed points onto PC space
+        # Project the fixed points onto the PCs
         pca_obj = self.expt_stats.pca_obj
         fps_proj = []
         for fp in fps['zloc']:
@@ -206,7 +207,7 @@ class FixedPointFinder():
 
 class LatentsLDA():
     def __init__(self, expt_stats, save_path, load_saved=True, 
-                 time_range=[-100, 1600], n_shuffle=1000, rand_seed=12345):
+                 time_range=[-100, 1600], n_shuffle=100, rand_seed=12345):
         self.expt_stats = expt_stats
         self.save_path = save_path
         self.load_saved = load_saved
@@ -235,30 +236,15 @@ class LatentsLDA():
         pt_filt = {'task_cue': 1}
         mv_inds = self.expt_stats.select(**mv_filt)
         pt_inds = self.expt_stats.select(**pt_filt)
-        mv_rs_inds, pt_rs_inds = self._balance_task_N(mv_inds, pt_inds)
         self.mv_z = np.squeeze(self.expt_stats.windowed['latents'][
-            self.t_ind, mv_rs_inds, :])
+            self.t_ind, mv_inds, :])
         self.pt_z = np.squeeze(self.expt_stats.windowed['latents'][
-            self.t_ind, pt_rs_inds, :])
-        self.mv_N = len(mv_rs_inds)
-        self.pt_N = len(pt_rs_inds)
+            self.t_ind, pt_inds, :])
+        self.mv_N = len(mv_inds)
+        self.pt_N = len(pt_inds)
         self.task_y = np.hstack((np.zeros(self.mv_N), 
                                  np.ones(self.pt_N))) 
         self.task_x = np.concatenate((self.mv_z, self.pt_z), axis=0)
-
-    def _balance_task_N(self, mv_inds, pt_inds):
-        if len(mv_inds) > len(pt_inds):
-            mv_rs_inds = mv_inds[self.rng.choice(len(mv_inds), len(pt_inds), 
-                                                 replace=False)]
-            pt_rs_inds = pt_inds
-        elif len(pt_inds) > len(mv_inds):
-            pt_rs_inds = pt_inds[self.rng.choice(len(pt_inds), len(mv_inds), 
-                                                 replace=False)]
-            mv_rs_inds = mv_inds
-        else:
-            pt_rs_inds = pt_inds
-            mv_rs_inds = mv_inds
-        return mv_rs_inds, pt_rs_inds
 
     def _get_lda_error(self, x, y):
         this_lda = LDA()
@@ -274,8 +260,7 @@ class LatentsLDA():
             bw_error = self._get_lda_error(self.task_x, self.task_y)
 
             # Between task error calculated on shuffled data
-            bw_shuffle_error = self._get_shuffle_error(
-                self.mv_z, self.pt_z, y=self.task_y)
+            bw_shuffle_error = self._get_shuffle_error(self.mv_z, self.pt_z)
 
             # Within task (same vs. different direction)
             # Average errors across all combinations
@@ -286,17 +271,11 @@ class LatentsLDA():
             for cue in cues:
                 for d in directions:
                     x1_inds = self.direction_inds[cue][d]
-                    if len(x1_inds) < 2:
-                        print(f'Skipped LDA for cue {cue}, dir {d} with N = {len(x1_inds)}!')
-                        continue
                     all_x2_inds = []
                     other_d = [i for i in directions if i != d]
                     for od in other_d:
                         all_x2_inds.extend(self.direction_inds[cue][od])
-                    # Balance sample size
-                    all_x2_inds = np.array(all_x2_inds)
-                    x2_inds = all_x2_inds[self.rng.choice(len(all_x2_inds), len(x1_inds), 
-                                                          replace=False)]
+                    x2_inds = np.array(all_x2_inds)
                     this_x1 = np.squeeze(self.expt_stats.windowed['latents'][
                         self.t_ind, x1_inds, :])
                     this_x2 = np.squeeze(self.expt_stats.windowed['latents'][
@@ -309,8 +288,8 @@ class LatentsLDA():
                     true_within_errors.append(self._get_lda_error(this_x, this_y))
 
                     # Within task error calculated on shuffled data
-                    shuffle_within_errors.append(self._get_shuffle_error(
-                        this_x1, this_x2, between_task=False))
+                    shuffle_within_errors.append(
+                        self._get_shuffle_error(this_x1, this_x2))
 
             within_error = np.mean(true_within_errors)
             within_shuffle_error = np.mean(shuffle_within_errors)
@@ -322,7 +301,7 @@ class LatentsLDA():
                 pickle.dump(lda_info, path, protocol=4)
         return lda_info
 
-    def _get_shuffle_error(self, x1, x2, between_task=True, y=None):
+    def _get_shuffle_error(self, x1, x2):
         shuffle_errors = []
         combined_data = np.concatenate((x1, x2), 0)
         N1 = x1.shape[0]
@@ -330,15 +309,9 @@ class LatentsLDA():
         all_inds = np.arange(N1 + N2)
         for n in range(self.n_shuffle):
             this_x1_inds = self.rng.choice(N1 + N2, N1, replace=False)
-            if between_task:
-                this_x2_inds = np.setdiff1d(all_inds, this_x1_inds)
-                this_y = y
-            else: # Balance sample size
-                all_x2_inds = np.setdiff1d(all_inds, this_x1_inds)
-                x2_rand_inds = self.rng.choice(N2, N1, replace=False)
-                this_x2_inds = all_x2_inds[x2_rand_inds]
-                this_y = np.hstack((np.zeros(len(this_x1_inds)), 
-                                    np.ones(len(this_x2_inds)))) 
+            this_x2_inds = np.setdiff1d(all_inds, this_x1_inds)
+            this_y = np.hstack((np.zeros(len(this_x1_inds)), 
+                                np.ones(len(this_x2_inds)))) 
             this_x1 = combined_data[this_x1_inds, :]
             this_x2 = combined_data[this_x2_inds, :]
             this_x = np.concatenate((this_x1, this_x2), axis=0)
