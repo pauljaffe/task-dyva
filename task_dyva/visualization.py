@@ -132,7 +132,6 @@ class BarPlot():
         for di, d in enumerate(plot_data):
             d_mean = np.mean(d)
             d_sem = np.std(d) / np.sqrt(len(d))
-            #ax.bar(di, d_mean, yerr=d_sem, width=width, **{'fc': colors[di]})
             ax.bar(di, d_mean, yerr=d_sem, width=width, error_kw={'elinewidth': 1},
                    **{'fc': colors[di]})
         ax = self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
