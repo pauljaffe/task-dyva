@@ -127,12 +127,14 @@ class BarPlot():
            'error_type must be one of the following: ' \
            f'{self.supported_error}'
         colors = sns.color_palette(palette=self.palette, n_colors=len(keys))
-        width = kwargs.get('width', 0.5)
+        width = kwargs.get('width', 0.75)
         plot_data = [self.df[key] for key in keys]
         for di, d in enumerate(plot_data):
             d_mean = np.mean(d)
             d_sem = np.std(d) / np.sqrt(len(d))
-            ax.bar(di, d_mean, yerr=d_sem, width=width, **{'fc': colors[di]})
+            #ax.bar(di, d_mean, yerr=d_sem, width=width, **{'fc': colors[di]})
+            ax.bar(di, d_mean, yerr=d_sem, width=width, error_kw={'elinewidth': 1},
+                   **{'fc': colors[di]})
         ax = self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
         return ax
 
@@ -265,14 +267,13 @@ class PlotModelLatents():
 
     def _adjust_plot(self, ax, elev, azim, **kwargs):
         ax.view_init(elev=elev, azim=azim)
-        ax.set_xlabel(f'PC {self.pcs_to_plot[0] + 1}')
-        ax.set_ylabel(f'PC {self.pcs_to_plot[1] + 1}')
-        ax.set_zlabel(f'PC {self.pcs_to_plot[2] + 1}')
+        ax.set_xlabel(f'PC {self.pcs_to_plot[0] + 1}', labelpad=-15)
+        ax.set_ylabel(f'PC {self.pcs_to_plot[1] + 1}', labelpad=-15)
+        ax.set_zlabel(f'PC {self.pcs_to_plot[2] + 1}', labelpad=-15)
         ax.set_title(kwargs.get('title', None))
         ax.yaxis._axinfo['grid']['linewidth'] = 0.5
         ax.xaxis._axinfo['grid']['linewidth'] = 0.5
-        legend_loc = kwargs.get('legend_loc', (0.9, 0.9))
-        ax.legend(bbox_to_anchor=legend_loc, ncol=2)
+        ax.legend(loc='upper center', ncol=2)
         ax.set_xlim(kwargs.get('xlim', None))
         ax.set_ylim(kwargs.get('ylim', None))
         ax.set_zlim(kwargs.get('zlim', None))
