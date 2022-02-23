@@ -89,7 +89,7 @@ class Figure3():
                                             self.analysis_dir, self.lda_summary_fn)
             with open(lda_summary_path, 'rb') as path:
                 lda_summary = pickle.load(path)
-            self.group_lda_summary.append(pd.DataFrame(lda_summary))
+            self.group_lda_summary.append(pd.DataFrame(lda_summary, index=[0]))
 
     def _plot_figure_get_stats(self):
         fig = plt.figure(constrained_layout=False, figsize=self.figsize, 
@@ -121,48 +121,11 @@ class Figure3():
         # Plotting params
         t_post = 1200
         elev, azim = 30, 60
-        stim_cue_vals = [(0, 0),
-                         (0, 1),
-                         (0, 2),
-                         (0, 3),
-                         (1, 0),
-                         (1, 1),
-                         (1, 2),
-                         (1, 3)]
-        labels = ['Moving L', 
-                  'Moving R', 
-                  'Moving U',
-                  'Moving D',
-                  'Pointing L', 
-                  'Pointing R',
-                  'Pointing U',
-                  'Pointing D']
-        styles = ['-', '-', '-', '-',
-                  '--', '--', '--', '--']
-        kwargs = {'xlim': [-25, 28], 'ylim': [-20, 10], 'zlim': [-10, 7],
-                  'legend_loc': [0.25, 1], 'mv_series_inds': [0, 1, 2, 3],
-                  'pt_series_inds': [4, 5, 6, 7], 'plot_series_onset': False,
-                  'plot_series_rt': True, 'plot_task_onset': True, 
-                  'plot_task_rt_centroid': False, 'line_width': 0.5}
-        series = self._get_panel_A_series(stim_cue_vals)
+        kwargs = {'xlim': [-25, 28], 'ylim': [-20, 10], 'zlim': [-10, 7]}
         # Plot
-        plotter = PlotModelLatents(self.ex_stats, t_post, fixed_points=self.ex_fps)
-        _ = plotter.plot_3d(series, labels, ax, elev=elev, azim=azim, **kwargs)
-
-    def _get_panel_A_series(self, stim_cue_vals):
-        all_selections = []
-        for this_stim_cue in stim_cue_vals:
-            this_cue = this_stim_cue[0]
-            this_stim = this_stim_cue[1]
-            if this_cue == 0: # moving task
-                this_filters = {'mv_dir': this_stim,                   
-                                'task_cue': this_cue}
-            else: # pointing task
-                this_filters = {'point_dir': this_stim,                   
-                                'task_cue': this_cue}    
-            this_inds = self.ex_stats.select(**this_filters)
-            all_selections.append(this_inds)
-        return all_selections
+        plotter = PlotModelLatents(self.ex_stats, t_post, 
+                                   fixed_points=self.ex_fps)
+        _ = plotter.plot_main_conditions(ax, elev=elev, azim=azim, **kwargs)
 
     def _make_panel_B(self, ax):
         # Note error bars show the SD
@@ -182,7 +145,7 @@ class Figure3():
         ax.errorbar(x, data_mean[:n_pcs], yerr=data_sd[:n_pcs], capsize=0, 
                     c='k', zorder=2, linewidth=0.5)
         ax.set_xlabel('PC #')
-        ax.set_ylabel('Explained variance')
+        ax.set_ylabel('Cumulative\nexplained variance')
         ax.set_xlim([0.75, n_pcs + 0.25])
         ax.set_xticks(x)
         ax.set_xticklabels(x)
@@ -191,9 +154,9 @@ class Figure3():
         ax.set_ylim(ylim)
         
         # Stats
-        for pc in x:
-            print(f'PC {pc} mean +/- s.e.m. cumulative explained var.: \
-                    {data_mean[pc]} +/- {data_sem[pc]}')
+        for pc_ind, pc in enumerate(x):
+            print(f'PC {pc} mean +/- s.e.m. cumulative explained var.: ' \
+                  f'{data_mean[pc_ind]} +/- {data_sem[pc_ind]}')
 
     def _make_panel_C(self, ax):
         df = pd.concat(self.group_lda_summary, ignore_index=True)
@@ -216,22 +179,22 @@ class Figure3():
         print('-------------------')
         w_task, p_task = wilcoxon(df['bw_error'].values, 
                                   df['bw_shuffle_error'].values)
-        p_direction, p_direction = wilcoxon(df['within_error'].values, 
+        w_direction, p_direction = wilcoxon(df['within_error'].values, 
                                             df['within_shuffle_error'].values)
-        print(f'Within vs. between task, signed-rank test: w_stat = {w_task}, \
-                p = {p_task}, N = {len(df)}')
-        print(f'Within task, same vs. different relevant direction, \
-               signed-rank: w_stat = {w_direction}, p = {p_direction}, \
-               N = {len(df)}')
+        print(f'Within vs. between task, signed-rank test: w_stat = {w_task}, ' \
+              f'p = {p_task}, N = {len(df)}')
+        print('Within task, same vs. different relevant direction, ' \
+              f'signed-rank: w_stat = {w_direction}, p = {p_direction}, ' \
+              f'N = {len(df)}')
         for key in keys:
-            print(f'{key} mean +/- s.e.m. misclassification rate: \
-                    {df[key].mean()} +/- {df[key].sem()}')
+            print(f'{key} mean +/- s.e.m. misclassification rate: ' \
+                  f'{df[key].mean()} +/- {df[key].sem()}')
 
     def _make_panel_D(self, ax, df):
         error_type = 'sem'
         plot_labels = ['Within task', 'Between task', 
-                       'Same response', 'Different response']
-        ylabel = 'Distance between \n fixed points (a.u.)'
+                       'Same direction', 'Different direction']
+        ylabel = 'Euclidean distance\nbetween fixed points (a.u.)'
         yticks = np.arange(0, 35, 5).astype('int')
         xlim = [-0.75, 3.75]
         ylim = [0, 30]
@@ -247,11 +210,11 @@ class Figure3():
                                   df['between_task'].values)
         w_direction, p_direction = wilcoxon(df['same_response'].values, 
                                             df['different_response'].values)
-        print(f'Within vs. between task, signed-rank test: w_stat = {w_task}, \
-                p = {p_task}, N = {len(df)}')
-        print(f'Within task, same vs. different relevant direction, \
-               signed-rank: w_stat = {w_direction}, p = {p_direction}, \
-               N = {len(df)}')
+        print(f'Within vs. between task, signed-rank test: w_stat = {w_task}, ' \
+              f'p = {p_task}, N = {len(df)}')
+        print('Within task, same vs. different relevant direction, ' \
+              f'signed-rank: w_stat = {w_direction}, p = {p_direction}, ' \
+              f'N = {len(df)}')
 
     def _get_user_fp_stats(self, data, user_id):
         stats = {}
