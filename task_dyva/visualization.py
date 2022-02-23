@@ -185,6 +185,53 @@ class PlotModelLatents():
         self.t_off_ind = self.n_pre + np.round(post_on_dur / self.step).astype('int')
         self.fixed_points = fixed_points
 
+    def plot_main_conditions(self, ax, elev=30, azim=60, **kwargs):
+        # Plot the 8 task cue x relevant stimulus direction combinations;
+        # also plot the fixed points. Used e.g. in Figs. 3A and S6. 
+        stim_cue_vals = [(0, 0),
+                         (0, 1),
+                         (0, 2),
+                         (0, 3),
+                         (1, 0),
+                         (1, 1),
+                         (1, 2),
+                         (1, 3)]
+        labels = ['Moving L', 
+                  'Moving R', 
+                  'Moving U',
+                  'Moving D',
+                  'Pointing L', 
+                  'Pointing R',
+                  'Pointing U',
+                  'Pointing D']
+        styles = ['-', '-', '-', '-',
+                  '--', '--', '--', '--']
+        series = self._get_main_series(stim_cue_vals)
+        plot_kwargs = {'mv_series_inds': [0, 1, 2, 3],
+                       'pt_series_inds': [4, 5, 6, 7], 
+                       'plot_series_onset': False, 'plot_series_rt': True, 
+                       'plot_task_onset': True, 'plot_task_rt_centroid': False, 
+                       'line_width': 0.5}
+        plot_kwargs.update(kwargs)
+        ax = self.plot_3d(series, labels, ax, elev=elev, azim=azim, 
+                          **plot_kwargs)
+        return ax
+
+    def _get_main_series(self, stim_cue_vals):
+        all_selections = []
+        for this_stim_cue in stim_cue_vals:
+            this_cue = this_stim_cue[0]
+            this_stim = this_stim_cue[1]
+            if this_cue == 0: # moving task
+                this_filters = {'mv_dir': this_stim,                   
+                                'task_cue': this_cue}
+            else: # pointing task
+                this_filters = {'point_dir': this_stim,                   
+                                'task_cue': this_cue}    
+            this_inds = self.data.select(**this_filters)
+            all_selections.append(this_inds)
+        return all_selections
+
     def plot_3d(self, series, labels, ax, elev=30, azim=60, **kwargs):
         # series should be a list of numpy arrays: the model latents
         # are averaged over each array of indices, then plotted. 
@@ -267,13 +314,8 @@ class PlotModelLatents():
 
     def _adjust_plot(self, ax, elev, azim, **kwargs):
         ax.view_init(elev=elev, azim=azim)
-        ax.set_xlabel(f'PC {self.pcs_to_plot[0] + 1}', labelpad=-15)
-        ax.set_ylabel(f'PC {self.pcs_to_plot[1] + 1}', labelpad=-15)
-        ax.set_zlabel(f'PC {self.pcs_to_plot[2] + 1}', labelpad=-15)
-        ax.set_title(kwargs.get('title', None))
         ax.yaxis._axinfo['grid']['linewidth'] = 0.5
         ax.xaxis._axinfo['grid']['linewidth'] = 0.5
-        ax.legend(loc='upper center', ncol=2)
         ax.set_xlim(kwargs.get('xlim', None))
         ax.set_ylim(kwargs.get('ylim', None))
         ax.set_zlim(kwargs.get('zlim', None))
@@ -281,4 +323,14 @@ class PlotModelLatents():
             ax.set_xticklabels('')
             ax.set_yticklabels('')
             ax.set_zticklabels('')
+        if kwargs.get('annotate', True):
+            ax = self._annotate_plot(ax, **kwargs)
+        return ax
+
+    def _annotate_plot(self, ax, **kwargs):
+        ax.set_xlabel(f'PC {self.pcs_to_plot[0] + 1}', labelpad=-15)
+        ax.set_ylabel(f'PC {self.pcs_to_plot[1] + 1}', labelpad=-15)
+        ax.set_zlabel(f'PC {self.pcs_to_plot[2] + 1}', labelpad=-15)
+        ax.set_title(kwargs.get('title', None))
+        ax.legend(loc='upper center', ncol=2, frameon=False)
         return ax
