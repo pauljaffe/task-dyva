@@ -47,7 +47,7 @@ class Preprocess():
     # LDA params
     lda_fn = 'lda_summary.pkl'
     lda_time_range = [-100, 1600]
-    lda_n_shuffle = 1000
+    lda_n_shuffle = 100
 
     def __init__(self, model_dir, metadata, reload_primary_outputs=True,
                  reload_behavior_summary=True, reload_fixed_points=True,
