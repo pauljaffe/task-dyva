@@ -259,7 +259,7 @@ class PlotModelLatents():
             if plot_series_onset:
                 ax = self._mark_3d_plot(ax, s, self.n_pre, 'k', 10, '.')
             if plot_series_rt:
-                t_ind = self._get_series_rt_samples(s)
+                t_ind = self._get_series_rt_samples(s) + self.n_pre
                 ax = self._mark_3d_plot(ax, s, t_ind, color, 6, 'o')
             if plot_times is not None:
                 ax = self._plot_timepoints(ax, s, plot_times, color)
