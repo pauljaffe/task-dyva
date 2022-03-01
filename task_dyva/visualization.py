@@ -151,7 +151,8 @@ class BarPlot():
         ax.set_xticks(plot_x)
         ax.set_xticklabels(kwargs.get('xticklabels', None),
                            rotation=45, ha='right', rotation_mode='anchor')
-        ax.set_yticks(kwargs.get('yticks'))
+        if 'yticks' in kwargs.keys():
+            ax.set_yticks(kwargs['yticks'])
         ax.set_xlim(kwargs.get('xlim', None))
         ax.set_ylim(kwargs.get('ylim', None))
         if kwargs.get('plot_legend', False):
@@ -174,7 +175,7 @@ class PlotModelLatents():
     default_colors = 2 * ['royalblue', 'forestgreen', 'crimson', 'orange']
 
     def __init__(self, data, post_on_dur=1200, pcs_to_plot=[0, 1, 2],
-                 fixed_points=None):
+                 fixed_points=None, plot_pre_onset=True):
         self.data = data
         self.pcs_to_plot = pcs_to_plot
         self.latents = data.windowed['pca_latents'][:, :, pcs_to_plot]
@@ -182,6 +183,10 @@ class PlotModelLatents():
         self.step = data.step
         self.n_pre = data.n_pre
         self.t_off_ind = self.n_pre + np.round(post_on_dur / self.step).astype('int')
+        if plot_pre_onset:
+            self.t_on_ind = 0
+        else:
+            self.t_on_ind = self.n_pre
         self.fixed_points = fixed_points
 
     def plot_main_conditions(self, ax, elev=30, azim=60, **kwargs):
@@ -244,6 +249,7 @@ class PlotModelLatents():
             ax = self._plot_task_centroid(ax, series, 'rt', **kwargs)
         plot_series_onset = kwargs.get('plot_series_onset', False)
         plot_series_rt = kwargs.get('plot_series_rt', False)
+        plot_times = kwargs.get('plot_times', None)
 
         for i, s in enumerate(series):
             label = labels[i]
@@ -255,10 +261,18 @@ class PlotModelLatents():
             if plot_series_rt:
                 t_ind = self._get_series_rt_samples(s)
                 ax = self._mark_3d_plot(ax, s, t_ind, color, 6, 'o')
+            if plot_times is not None:
+                ax = self._plot_timepoints(ax, s, plot_times, color)
 
         if self.fixed_points is not None:
             ax = self._plot_fixed_points(ax)
         ax = self._adjust_plot(ax, elev, azim, **kwargs)
+        return ax
+
+    def _plot_timepoints(self, ax, series, times, color):
+        for t in times:
+            t_plot = int(self.n_pre + t / self.step)
+            ax = self._mark_3d_plot(ax, series, t_plot, color, 5, 'x')
         return ax
 
     def _get_series_rt_samples(self, series):
@@ -277,23 +291,23 @@ class PlotModelLatents():
                 t_ind = self.n_pre
             elif centroid_type == 'rt':
                 marker = 'd'
-                t_ind = self._get_series_rt_samples(inds)
+                t_ind = self._get_series_rt_samples(inds) + self.n_pre
             ax = self._mark_3d_plot(ax, inds, t_ind, color, size, marker)
         return ax
 
     def _mark_3d_plot(self, ax, series_inds, t_ind, color, size, marker):
-        x = np.mean(self.latents[:self.t_off_ind, series_inds, 0], 1)
-        y = np.mean(self.latents[:self.t_off_ind, series_inds, 1], 1)
-        z = np.mean(self.latents[:self.t_off_ind, series_inds, 2], 1)
+        x = np.mean(self.latents[:, series_inds, 0], 1)
+        y = np.mean(self.latents[:, series_inds, 1], 1)
+        z = np.mean(self.latents[:, series_inds, 2], 1)
         ax.scatter(x[t_ind], y[t_ind], z[t_ind], marker=marker,
-                   edgecolors=color, facecolors=color, s=size,
+                   facecolors=color, s=size,
                    linewidth=0.5, label=None)
         return ax
 
     def _plot_3d_line(self, ax, series_inds, color, style, label, width):
-        x = np.mean(self.latents[:self.t_off_ind, series_inds, 0], 1)
-        y = np.mean(self.latents[:self.t_off_ind, series_inds, 1], 1)
-        z = np.mean(self.latents[:self.t_off_ind, series_inds, 2], 1)
+        x = np.mean(self.latents[self.t_on_ind:self.t_off_ind, series_inds, 0], 1)
+        y = np.mean(self.latents[self.t_on_ind:self.t_off_ind, series_inds, 1], 1)
+        z = np.mean(self.latents[self.t_on_ind:self.t_off_ind, series_inds, 2], 1)
         ax.plot(x, y, z, color=color, label=label, linestyle=style, 
                 linewidth=width)
         return ax
