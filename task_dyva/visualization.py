@@ -182,7 +182,8 @@ class PlotModelLatents():
         self.m_rts = data.df['mrt_ms'].to_numpy()
         self.step = data.step
         self.n_pre = data.n_pre
-        self.t_off_ind = self.n_pre + np.round(post_on_dur / self.step).astype('int')
+        self.t_off_ind = self.n_pre + 1 \
+                         + np.round(post_on_dur / self.step).astype('int')
         if plot_pre_onset:
             self.t_on_ind = 0
         else:
