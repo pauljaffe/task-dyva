@@ -96,7 +96,7 @@ class Figure3():
                          dpi=self.figdpi)
         gs = fig.add_gridspec(12, 20)
 
-        # Panel A: Example user trajectories + fixed points
+        # Panel A: Example model trajectories + fixed points
         axA = fig.add_subplot(gs[0:10, 0:10], projection='3d')
         self._make_panel_A(axA)
 
@@ -123,7 +123,7 @@ class Figure3():
         elev, azim = 30, 60
         kwargs = {'xlim': [-25, 28], 'ylim': [-20, 10], 'zlim': [-10, 7]}
         # Plot
-        plotter = PlotModelLatents(self.ex_stats, t_post, 
+        plotter = PlotModelLatents(self.ex_stats, post_on_dur=t_post, 
                                    fixed_points=self.ex_fps)
         _ = plotter.plot_main_conditions(ax, elev=elev, azim=azim, **kwargs)
 
@@ -176,7 +176,6 @@ class Figure3():
         
         # Stats
         print('LDA analysis stats:')
-        print('-------------------')
         w_task, p_task = wilcoxon(df['bw_error'].values, 
                                   df['bw_shuffle_error'].values)
         w_direction, p_direction = wilcoxon(df['within_error'].values, 
@@ -189,6 +188,7 @@ class Figure3():
         for key in keys:
             print(f'{key} mean +/- s.e.m. misclassification rate: ' \
                   f'{df[key].mean()} +/- {df[key].sem()}')
+        print('---------------------------------------')
 
     def _make_panel_D(self, ax, df):
         error_type = 'sem'
@@ -205,7 +205,6 @@ class Figure3():
 
         # Stats
         print('Stats on distance between fixed points:')
-        print('---------------------------------------')
         w_task, p_task = wilcoxon(df['within_task'].values, 
                                   df['between_task'].values)
         w_direction, p_direction = wilcoxon(df['same_response'].values, 
@@ -230,10 +229,10 @@ class Figure3():
 
     def _get_group_fp_stats(self):
         print('Stats on number of fixed points, all models:')
-        print('--------------------------------------------')
         df = pd.concat(self.group_fp_summary, ignore_index=True)
         N_zero = len(df.query('N == 0'))
         print(f'N models with no fixed points: {N_zero}')
+        print('--------------------------------------------')
 
         # Check counts for each of the distance keys with np.isnan
         for key in self.distance_keys:
@@ -248,10 +247,10 @@ class Figure3():
         f_mean = df_filt['f_stimuli_with_fp'].mean()
         f_sem = df_filt['f_stimuli_with_fp'].sem()
         print('Stats on fixed points, models included in distance analyses:')
-        print('------------------------------------------------------------')
         print(f'N models included in distance analyses: {len(df_filt)}') 
         print(f'N models with at least ten fixed points: {N10}')
         print(f'Mean +/- s.e.m. fixed points per model: {N_mean} +/- {N_sem}')
         print('Mean +/- s.e.m. fraction of possible stimulus configurations' \
               f'with a fixed point: {f_mean} +/- {f_sem}')
+        print('------------------------------------------------------------')
         return df_filt

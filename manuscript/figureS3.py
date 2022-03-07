@@ -121,5 +121,5 @@ class FigureS3():
             print(f'Participant vs. model sign-rank p-val: {p}')
             print(f'Participant mean +/- s.e.m.: {u_mean} +/- {u_sem}')
             print(f'Model mean +/- s.e.m.: {m_mean} +/- {m_sem}')
-            print('------------')
+            print('----------------------------------')
         return u_mean, m_mean, u_sem, m_sem
