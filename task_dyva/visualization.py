@@ -240,9 +240,7 @@ class PlotModelLatents():
         styles = ['-', '-', '-', '-',
                   '--', '--', '--', '--']
         series = self._get_main_series(stim_cue_vals)
-        plot_kwargs = {'mv_series_inds': [0, 1, 2, 3],
-                       'pt_series_inds': [4, 5, 6, 7], 
-                       'plot_series_onset': False, 'plot_series_rt': True, 
+        plot_kwargs = {'plot_series_onset': True, 'plot_series_rt': True, 
                        'plot_task_centroid': plot_task_centroid,
                        'line_width': 0.5, 'line_styles': styles}
         plot_kwargs.update(kwargs)
@@ -273,7 +271,7 @@ class PlotModelLatents():
         width = kwargs.get('line_width', 0.5)
         rt_marker = kwargs.get('rt_marker', 'o')
         if kwargs.get('plot_task_centroid', False):
-            ax = self._plot_task_centroid(ax, series, **kwargs)
+            ax = self._plot_task_centroid(ax)
         plot_series_onset = kwargs.get('plot_series_onset', False)
         plot_series_rt = kwargs.get('plot_series_rt', False)
         plot_times = kwargs.get('plot_times', None)
@@ -306,13 +304,13 @@ class PlotModelLatents():
         rt = np.round(np.mean(self.m_rts[series]) / self.step).astype('int')
         return rt
 
-    def _plot_task_centroid(self, ax, series, centroid_type, **kwargs):
-        color, size, marker = 'k', 10, '.'
+    def _plot_task_centroid(self, ax):
+        color, size, marker = 'k', 10, 'd'
         t_ind = self.n_pre
-        mv_inds = np.concatenate([
-            series[i] for i in kwargs['mv_series_inds']])
-        pt_inds = np.concatenate([
-            series[i] for i in kwargs['pt_series_inds']])
+        mv_filter = {'task_cue': 0, 'prev_task_cue': 0}
+        mv_inds = self.data.select(**mv_filter)
+        pt_filter = {'task_cue': 1, 'prev_task_cue': 1}
+        pt_inds = self.data.select(**pt_filter)
         for inds in [mv_inds, pt_inds]:
             ax = self._mark_3d_plot(ax, inds, t_ind, color, size, marker)
         return ax

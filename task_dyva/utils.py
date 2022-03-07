@@ -231,10 +231,3 @@ def expt_stats_to_df(metrics, expts, age_bins, stats):
             df = df.append(new_u_row, ignore_index=True)
             df = df.append(new_m_row, ignore_index=True) 
     return df
-
-
-def get_all_trial_combos():
-    all_combos = list(itertools.product([0, 1, 2, 3],
-                                        [0, 1, 2, 3],
-                                        [0, 1]))
-    return all_combos
