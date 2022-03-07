@@ -124,7 +124,7 @@ class Figure3():
         kwargs = {'xlim': [-25, 28], 'ylim': [-20, 10], 'zlim': [-10, 7]}
         # Plot
         plotter = PlotModelLatents(self.ex_stats, post_on_dur=t_post, 
-                                   fixed_points=self.ex_fps)
+                                   fixed_points=self.ex_fps, plot_pre_onset=False)
         _ = plotter.plot_main_conditions(ax, elev=elev, azim=azim, **kwargs)
 
     def _make_panel_B(self, ax):

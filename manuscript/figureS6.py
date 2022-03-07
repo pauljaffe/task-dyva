@@ -91,7 +91,7 @@ class FigureS6():
                 else:
                     kwargs = {'annotate': False}
                 plotter = PlotModelLatents(plot_stats, post_on_dur=t_post,
-                                           fixed_points=plot_fps)
+                                           fixed_points=plot_fps, plot_pre_onset=False)
                 ax = plotter.plot_main_conditions(ax, elev=elev, azim=azim,
                                                   **kwargs)
                 if ax_ind == 0:
