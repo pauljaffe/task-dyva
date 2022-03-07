@@ -190,6 +190,33 @@ class PlotModelLatents():
             self.t_on_ind = self.n_pre
         self.fixed_points = fixed_points
 
+    def plot_stay_switch(self, ax, params, elev=30, azim=60):
+        # Plot average stay and switch trajectories for one task cue
+        # and one response direction (used e.g. in Fig. 4A).
+        labels = ['Stay', 'Switch']
+        styles = ['-', '-']
+        series = self._get_stay_switch_series(params)
+        cmap = sns.color_palette('viridis', as_cmap=True)
+        color_indices = [0.2, 0.8]
+        colors = [cmap(i) for i in color_indices]
+        plot_kwargs = {'colors': colors, 'line_styles': styles,
+                       'line_width': 0.5, 'plot_series_onset': True,
+                       'plot_series_rt': True, 'plot_times': np.array([100])}
+        ax = self.plot_3d(series, labels, ax, elev=elev, azim=azim, 
+                          **plot_kwargs)
+        return ax
+
+    def _get_stay_switch_series(self, params):
+        pt, mv, cue = (params['pt'], params['mv'], params['cue'])
+        stay_filter = {'point_dir': pt, 'mv_dir': mv, 'task_cue': cue,
+                       'prev_task_cue': cue}
+        switch_filter = {'point_dir': pt, 'mv_dir': mv, 'task_cue': cue,
+                         'prev_task_cue': 1 - cue}
+        stay_inds = self.data.select(**stay_filter)
+        switch_inds = self.data.select(**switch_filter)
+        all_selections = [stay_inds, switch_inds]
+        return all_selections
+
     def plot_main_conditions(self, ax, elev=30, azim=60, **kwargs):
         # Plot the 8 task cue x relevant stimulus direction combinations;
         # also plot the fixed points. Used e.g. in Figs. 3A and S6. 
@@ -273,7 +300,7 @@ class PlotModelLatents():
     def _plot_timepoints(self, ax, series, times, color):
         for t in times:
             t_plot = int(self.n_pre + t / self.step)
-            ax = self._mark_3d_plot(ax, series, t_plot, color, 5, 'x')
+            ax = self._mark_3d_plot(ax, series, t_plot, color, 7, 'x')
         return ax
 
     def _get_series_rt_samples(self, series):

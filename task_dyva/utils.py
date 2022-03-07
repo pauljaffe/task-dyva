@@ -212,6 +212,7 @@ def plot_scatter(group_stats, params, ax, line_ext):
     print(f'{metric} slope: {m}; intercept: {b}') 
     print(f'Participant {metric} mean +/- s.e.m.: {u_mean} +/- {u_sem}')
     print(f'Model {metric} mean +/- s.e.m.: {m_mean} +/- {m_sem}')
+    print('--------------------------------------------------------')
 
 
 def expt_stats_to_df(metrics, expts, age_bins, stats):
