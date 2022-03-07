@@ -125,7 +125,8 @@ class Figure3():
         # Plot
         plotter = PlotModelLatents(self.ex_stats, post_on_dur=t_post, 
                                    fixed_points=self.ex_fps, plot_pre_onset=False)
-        _ = plotter.plot_main_conditions(ax, elev=elev, azim=azim, **kwargs)
+        _ = plotter.plot_main_conditions(ax, elev=elev, azim=azim, 
+                                         plot_task_centroid=False, **kwargs)
 
     def _make_panel_B(self, ax):
         # Note error bars show the SD
