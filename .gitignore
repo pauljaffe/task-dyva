@@ -2,6 +2,7 @@
 training_runs/
 checkpoints/
 exploratory/
+*exploratory.py
 *_inputs.pt
 *_data.pkl
 *split_inds.pkl
