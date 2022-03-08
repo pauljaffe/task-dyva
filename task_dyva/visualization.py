@@ -305,7 +305,7 @@ class PlotModelLatents():
         return rt
 
     def _plot_task_centroid(self, ax):
-        color, size, marker = 'k', 10, 'd'
+        color, size, marker = 'k', 20, '*'
         t_ind = self.n_pre
         mv_filter = {'task_cue': 0, 'prev_task_cue': 0}
         mv_inds = self.data.select(**mv_filter)
@@ -347,8 +347,9 @@ class PlotModelLatents():
 
     def _adjust_plot(self, ax, elev, azim, **kwargs):
         ax.view_init(elev=elev, azim=azim)
-        ax.yaxis._axinfo['grid']['linewidth'] = 0.5
-        ax.xaxis._axinfo['grid']['linewidth'] = 0.5
+        ax.xaxis._axinfo['grid']['linewidth'] = 0.25
+        ax.yaxis._axinfo['grid']['linewidth'] = 0.25
+        ax.zaxis._axinfo['grid']['linewidth'] = 0.25
         ax.set_xlim(kwargs.get('xlim', None))
         ax.set_ylim(kwargs.get('ylim', None))
         ax.set_zlim(kwargs.get('zlim', None))

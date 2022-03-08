@@ -1,5 +1,4 @@
 import os
-import itertools
 
 import torch
 import numpy as np
@@ -193,10 +192,10 @@ def plot_scatter(group_stats, params, ax, line_ext):
     plot_x = np.array([min(u_vals) - line_ext, 
                        max(u_vals) + line_ext])
     m, b = np.polyfit(u_vals, m_vals, 1)
-    ax.plot(plot_x, m * plot_x + b, 'k-', zorder=1)
+    ax.plot(plot_x, m * plot_x + b, 'k-', zorder=2)
     
     # Plot all individuals
-    ax.scatter(u_vals, m_vals, s=6, marker='o', zorder=2, alpha=0.75)
+    ax.scatter(u_vals, m_vals, s=6, marker='o', zorder=1)
     ax.set_xlabel(f"Participant {params['label']}")
     ax.set_ylabel(f"Model {params['label']}")
     ax.set_xlim(params['ax_lims'])

@@ -6,8 +6,7 @@ import torch
 import numpy as np
 import pandas as pd
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-
-from .utils import get_all_trial_combos
+from scipy.stats import pearsonr
 
 
 class FixedPointFinder():
@@ -206,6 +205,9 @@ class FixedPointFinder():
 
 
 class LatentsLDA():
+    # Run the LDA analyses for the paper (default params are
+    # those used in the paper). 
+
     def __init__(self, expt_stats, save_path, load_saved=True, 
                  time_range=[-100, 1600], n_shuffle=100, rand_seed=12345):
         self.expt_stats = expt_stats
@@ -318,3 +320,86 @@ class LatentsLDA():
             shuffle_errors.append(self._get_lda_error(this_x, this_y))
         shuffle_mean = np.mean(shuffle_errors)
         return shuffle_mean
+
+
+class LatentSeparation():
+    # Defines methods for calculating the distance between task centroids,
+    # used e.g. in Fig. 4 of the paper.
+
+    def __init__(self, expt_stats, min_N=5):
+        self.expt_stats = expt_stats
+        self.min_N = min_N
+        self.t0_ind = expt_stats.n_pre
+        self._get_task_centroids()
+        self._get_stimulus_combos()
+
+    def _get_stimulus_combos(self):
+        self.combos = list(itertools.product([0, 1, 2, 3],
+                                             [0, 1, 2, 3],
+                                             [0, 1]))
+
+    def _get_task_centroids(self):
+        # Calculate latent state centroids at the mean RT for each task
+        mv_filter = {'task_cue': 0, 'prev_task_cue': 0}
+        self.mv_inds = self.expt_stats.select(**mv_filter)
+        self.mv_centroid = self._get_centroid(self.mv_inds)
+        pt_filter = {'task_cue': 1, 'prev_task_cue': 1}
+        self.pt_inds = self.expt_stats.select(**pt_filter)
+        self.pt_centroid = self._get_centroid(self.pt_inds)
+
+    def _get_centroid(self, trial_inds):
+        # Centroid calculated at the mean RT
+        z = self.expt_stats.windowed['latents'][:, trial_inds, :]
+        return np.mean(np.squeeze(z[self.t0_ind, :, :]), 0)
+    
+    def _get_trial_distances(self, trial_inds, centroid):
+        z = self.expt_stats.windowed['latents'][self.t0_ind, trial_inds, :]   
+        return np.linalg.norm(z - centroid, axis=1, ord=2)
+        
+    def _get_hypercube_norm(self, z):
+        # Calculate the volume of the hypercube defined by the 
+        # max/min of each latent state variable, 
+        # return the 16th root (= z_dim).
+        z_dim = z.shape[2]
+        mins = np.amin(z, axis=(0, 1))
+        maxs = np.amax(z, axis=(0, 1))
+        ranges = maxs - mins
+        return np.prod(ranges ** (1 / z_dim))
+
+    def analyze(self):
+        stats = {}
+
+        # Get correlation between distance to task centroid and RT
+        all_r = []
+        num_low_N = 0
+        num_constant = 0
+        for c in self.combos:
+            mv, pt, cue = c
+            filt = {'mv_dir': mv, 'point_dir': pt, 'task_cue': cue,
+                    'prev_task_cue': 1 - cue}
+            trial_inds = self.expt_stats.select(**filt)
+            if cue == 0:
+                c_centroid = self.mv_centroid
+            else:
+                c_centroid = self.pt_centroid
+            this_dists = self._get_trial_distances(trial_inds, c_centroid)
+            rts = self.expt_stats.df['mrt_ms'][trial_inds]
+            if len(trial_inds) >= self.min_N:
+                combo_r, _ = pearsonr(this_dists, rts)
+                if np.isnan(combo_r): # Happens when RT array is constant (very rare)
+                    num_constant += 1
+                else:
+                    all_r.append(combo_r)
+            else:
+                num_low_N += 1
+        stats['all_r'] = all_r
+        stats['mean_r'] = np.mean(all_r) 
+        stats['num_low_N'] = num_low_N
+        stats['num_constant'] = num_constant
+
+        # Get distance between task centroids
+        norm_factor = self._get_hypercube_norm(self.expt_stats.latents)
+        centroid_dist = np.linalg.norm(self.mv_centroid - self.pt_centroid, ord=2)
+        stats['normed_centroid_dist'] = centroid_dist / norm_factor
+
+        return stats
