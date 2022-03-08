@@ -1,5 +1,6 @@
 import os
 import pickle
+import copy
 
 import numpy as np
 import pandas as pd
@@ -8,20 +9,22 @@ import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon, pearsonr
 
 from task_dyva.utils import save_figure
-from task_dyva.visualization import BarPlot, PlotModelLatents
-from task_dyva.model_analysis import LatentSeparation
 
 
-class Figure4():
+class Figure5():
     """Analysis methods and plotting routines to reproduce
-    Figure 4 from the manuscript (dynamical origins of the switch cost).
+    Figure 5 from the manuscript (separated task representations 
+    confers robustness).
     """
 
     analysis_dir = 'model_analysis'
-    stats_fn = 'holdout_outputs_01SD.pkl'
-    A_id = 438
-    D_id = 195
-    figsize = (9, 5.5)
+    stats_fn = 'behavior_summary.pkl'
+    behavior_keys = ['m_accuracy', 'u_accuracy', 'con_error_rate',
+                     'incon_error_rate', 'stay_error_rate', 
+                     'switch_error_rate']
+    noise_labels = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '1']
+    noise_sds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    figsize = (8, 3)
     figdpi = 300
     palette = 'viridis'
 
@@ -29,66 +32,43 @@ class Figure4():
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
-        self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
 
         # Containers for summary stats
-        self.A_stats = {'mv': 2, 'pt': 2, 'cue': 1}
-        self.B_stats = []
-        self.num_low_N = [] # Keep track of exclusions for panel B
-        self.num_constant = []
-        self.C_dists = []
-        self.C_switch_costs = []
-        self.E_stats = {'sc_plus_centroid_d': [], 'sc_minus_centroid_d': []}
+        stat_dict = {k: [] for k in self.behavior_keys}
+        self.sc_minus_stats = {n: copy.deepcopy(stat_dict) 
+                               for n in self.noise_labels}
+        self.sc_plus_stats = copy.deepcopy(self.sc_minus_stats)
 
     def make_figure(self):
-        print('Making Figure 4...')
+        print('Making Figure 5...')
         self._run_preprocessing()
-        print('Stats for Figure 4')
+        print('Stats for Figure 5')
         print('------------------')
         fig = self._plot_figure_get_stats()
-        save_figure(fig, self.save_dir, 'Fig4')
+        save_figure(fig, self.save_dir, 'Fig5')
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, uid, sc in zip(self.expts, 
-                                     self.user_ids, 
-                                     self.sc_status):
+        for expt_str, sc in zip(self.expts, 
+                                self.sc_status):
 
-            # Load stats from the holdout data
-            stats_path = os.path.join(self.model_dir, expt_str, 
-                                      self.analysis_dir, self.stats_fn)
-            with open(stats_path, 'rb') as path:
-                expt_stats = pickle.load(path)
-
-            # Distance to task centroids, stay vs. switch trials
-            latent_sep = LatentSeparation(expt_stats)
-            dist_stats = latent_sep.analyze()
-            if sc != 'sc-':
-                self.B_stats.append(dist_stats['mean_r'])
-                self.num_low_N.append(dist_stats['num_low_N'])
-                self.num_constant.append(dist_stats['num_constant'])
-                self.C_switch_costs.append(expt_stats.summary_stats['m_switch_cost'])
-                self.C_dists.append(dist_stats['normed_centroid_dist'])
-
-            # Comparison of sc- vs. sc+ models
             if sc in ['sc+', 'sc-']:
-                # Task centroid separation
-                if sc == 'sc+':
-                    self.E_stats['sc_plus_centroid_d'].append(
-                        dist_stats['normed_centroid_dist'])
-                elif sc == 'sc-':
-                    self.E_stats['sc_minus_centroid_d'].append(
-                        dist_stats['normed_centroid_dist'])
+                stats_path = os.path.join(self.model_dir, expt_str, 
+                                          self.analysis_dir, self.stats_fn)
+                with open(stats_path, 'rb') as path:
+                    this_stats = pickle.load(path)
 
-            # Examples
-            if uid == self.A_id and sc != 'sc-':
-                self.A_stats['stats'] = expt_stats
-            if uid == self.D_id and sc == 'sc+':
-                self.D_sc_plus_stats = expt_stats
-            if uid == self.D_id and sc == 'sc-':
-                self.D_sc_minus_stats = expt_stats
+                for n in self.noise_labels:
+                    for key in self.behavior_keys:
+                        stat = this_stats[n][key]
+                        if sc == 'sc+':
+                            self.sc_plus_stats[n][key].append(stat)
+                        elif sc == 'sc-':
+                            self.sc_minus_stats[n][key].append(stat)
 
+
+# BELOW: RESUME HERE!
     def _plot_figure_get_stats(self):
         fig = plt.figure(constrained_layout=False, figsize=self.figsize, 
                          dpi=self.figdpi)

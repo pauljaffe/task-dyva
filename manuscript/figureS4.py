@@ -27,7 +27,6 @@ class FigureS4():
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.age_bins = metadata['age_range']
-        self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
 
         # Containers for summary stats
@@ -46,10 +45,9 @@ class FigureS4():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, uid, sc in zip(self.expts, 
-                                         self.age_bins, 
-                                         self.user_ids, 
-                                         self.sc_status):
+        for expt_str, ab, sc in zip(self.expts, 
+                                    self.age_bins, 
+                                    self.sc_status):
             # Skip sc- models
             if sc == 'sc-':
                 continue

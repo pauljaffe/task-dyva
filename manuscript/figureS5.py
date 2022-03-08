@@ -24,8 +24,6 @@ class FigureS5():
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
-        self.age_bins = metadata['age_range']
-        self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
 
         # Containers for summary stats
@@ -44,10 +42,8 @@ class FigureS5():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, uid, sc in zip(self.expts, 
-                                         self.age_bins, 
-                                         self.user_ids, 
-                                         self.sc_status):
+        for expt_str, sc in zip(self.expts, 
+                                self.sc_status):
             # Skip sc- models
             if sc == 'sc-':
                 continue
@@ -58,7 +54,7 @@ class FigureS5():
             with open(stats_path, 'rb') as path:
                 expt_stats = pickle.load(path)
             for key in self.group_stats.keys():
-                self.group_stats[key].append(expt_stats[noise_key][key])
+                self.group_stats[key].append(expt_stats[self.noise_key][key])
 
     def _plot_figure_get_stats(self):
         fig, axes = plt.subplots(1, 3, figsize=self.figsize)
