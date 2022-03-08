@@ -128,6 +128,11 @@ class Preprocess():
                 summary[noise_key][u_key] = expt_stats.summary_stats[u_key]
                 summary[noise_key][m_key] = expt_stats.summary_stats[m_key]
 
+            if model_type in ['sc+', 'sc-']:
+                # Get conditional error rates
+                error_info = self._get_error_info(expt_stats.df)
+                summary[noise_key].update(error_info)
+
         # Save and remove intermediate files
         save_path = os.path.join(model_dir, 
                                  self.analysis_dir, 
@@ -135,6 +140,27 @@ class Preprocess():
         with open(save_path, 'wb') as path:
             pickle.dump(summary, path, protocol=4)
         self._clean_up_behavior_summary(model_dir, noise_keys)
+
+    def _get_error_info(self, df):
+        errors = {}
+
+        n_con = len(df.query('is_congruent == 1'))
+        n_con_errors = len(df.query('is_congruent == 1 and mcorrect == 0'))
+        errors['con_error_rate'] = n_con_errors / n_con
+
+        n_incon = len(df.query('is_congruent == 0'))
+        n_incon_errors = len(df.query('is_congruent == 0 and mcorrect == 0'))
+        errors['incon_error_rate'] = n_incon_errors / n_incon
+
+        n_stay = len(df.query('is_switch == 0'))
+        n_stay_errors = len(df.query('is_switch == 0 and mcorrect == 0'))
+        errors['stay_error_rate'] = n_stay_errors / n_stay
+
+        n_switch = len(df.query('is_switch == 1'))
+        n_switch_errors = len(df.query('is_switch == 1 and mcorrect == 0'))
+        errors['switch_error_rate'] = n_switch_errors / n_switch
+
+        return errors
 
     def _clean_up_behavior_summary(self, model_dir, noise_keys):
         for key in noise_keys:
