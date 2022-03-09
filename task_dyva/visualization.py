@@ -111,13 +111,16 @@ class BarPlot():
         width = kwargs.get('width', 0.35)
         x_offset = -width / 2
         hue_types = self.df[hue].unique()
+        elinewidth = kwargs.get('elinewidth', 1)
+        error_kw = {'elinewidth': elinewidth}
         for i, h in enumerate(hue_types):
             group_df = self.df.query(f'{hue} == @h')
             group_means, group_errors = self._get_group_data(
                 group_df, x, y, error_type)
             plot_x = np.arange(len(group_means))
             ax.bar(plot_x + x_offset, group_means, yerr=group_errors,
-                   width=width, label=h, **{'fc': colors[i]})
+                   width=width, label=h, error_kw=error_kw, 
+                   **{'fc': colors[i]})
             x_offset += width
         ax = self._adjust_bar(plot_x, ax, **kwargs)
         return ax
@@ -157,6 +160,7 @@ class BarPlot():
         ax.set_ylim(kwargs.get('ylim', None))
         if kwargs.get('plot_legend', False):
             ax.legend()
+            ax.get_legend().get_frame().set_linewidth(0.0)  
         return ax
 
 
