@@ -146,7 +146,7 @@ class Figure4():
 
         print('Panel B, main summary stats')
         N = len(self.B_stats)
-        _, p = wilcoxon(self.B_stats)
+        _, p = wilcoxon(self.B_stats, mode='approx')
         n_pos = np.count_nonzero(np.nonzero(np.array(self.B_stats) > 0))
         print(f'Mean +/- s.e.m. corr. within model, dist vs. model RTs: ' \
               f'{np.mean(self.B_stats)} +/- {np.std(self.B_stats) / np.sqrt(N)}')
@@ -218,7 +218,8 @@ class Figure4():
         # Stats
         print('Panel E, sc+ vs. sc- distance stats:')
         w, p = wilcoxon(df['sc_plus_centroid_d'].values, 
-                        df['sc_minus_centroid_d'].values)
+                        y=df['sc_minus_centroid_d'].values,
+                        mode='approx')
         print('sc+ vs. sc- distance b/w task centroids, signed-rank test: ' \
               f'w = {w}, p = {p}, N = {len(df)}')
         print('----------------------------------------')

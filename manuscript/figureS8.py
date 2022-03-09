@@ -123,7 +123,7 @@ class FigureS8():
         print(f"sc+ vs. sc- model stats for {params['key']}:")
         print(f'Mean +/- s.e.m., sc+: {m_plus} +/- {sem_plus}')
         print(f'Mean +/- s.e.m., sc-: {m_minus} +/- {sem_minus}')
-        w, p = wilcoxon(sc_plus, sc_minus)
+        w, p = wilcoxon(sc_plus, y=sc_minus, mode='approx')
         print(f'Signed-rank test: w = {w}, p = {p}, N = {len(sc_plus)}')
         print('---------------------------------------------')
 

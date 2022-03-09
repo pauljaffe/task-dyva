@@ -176,9 +176,11 @@ class Figure3():
         # Stats
         print('LDA analysis stats:')
         w_task, p_task = wilcoxon(df['bw_error'].values, 
-                                  df['bw_shuffle_error'].values)
+                                  y=df['bw_shuffle_error'].values,
+                                  mode='approx')
         w_direction, p_direction = wilcoxon(df['within_error'].values, 
-                                            df['within_shuffle_error'].values)
+                                            y=df['within_shuffle_error'].values,
+                                            mode='approx')
         print(f'Within vs. between task, signed-rank test: w_stat = {w_task}, ' \
               f'p = {p_task}, N = {len(df)}')
         print('Within task, same vs. different relevant direction, ' \
@@ -205,9 +207,11 @@ class Figure3():
         # Stats
         print('Stats on distance between fixed points:')
         w_task, p_task = wilcoxon(df['within_task'].values, 
-                                  df['between_task'].values)
+                                  y=df['between_task'].values,
+                                  mode='approx')
         w_direction, p_direction = wilcoxon(df['same_response'].values, 
-                                            df['different_response'].values)
+                                            y=df['different_response'].values,
+                                            mode='approx')
         print(f'Within vs. between task, signed-rank test: w_stat = {w_task}, ' \
               f'p = {p_task}, N = {len(df)}')
         print('Within task, same vs. different relevant direction, ' \

@@ -8,28 +8,22 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon
 
-from task_dyva.visualization import BarPlot
 from task_dyva.utils import save_figure
 
 
-class Figure5():
+class FigureS9():
     """Analysis methods and plotting routines to reproduce
-    Figure 5 from the manuscript (separated task representations 
-    confers robustness).
+    Figure S9 from the manuscript (stats on sc+ vs. sc-
+    model accuracy at all noise levels). 
     """
 
     analysis_dir = 'model_analysis'
     stats_fn = 'behavior_summary.pkl'
-    behavior_keys = ['m_accuracy', 'u_accuracy', 'con_error_rate',
-                     'incon_error_rate', 'stay_error_rate', 
-                     'switch_error_rate']
     noise_labels = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '1']
     noise_sds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    noise_5C = '05' # 0.5SD noise analyzed in panel 5C
-    figsize = (7.5, 1.5)
+    figsize = (6.5, 2)
     figdpi = 300
     palette = 'viridis'
-    heatmap_palette = sns.diverging_palette(260, 10, l=50, s=100, as_cmap=True)
 
     def __init__(self, model_dir, save_dir, metadata):
         self.model_dir = model_dir
@@ -44,12 +38,10 @@ class Figure5():
         self.sc_plus_stats = copy.deepcopy(self.sc_minus_stats)
 
     def make_figure(self):
-        print('Making Figure 5...')
+        print('Making Figure S9...')
         self._run_preprocessing()
-        print('Stats for Figure 5')
-        print('------------------')
         fig = self._plot_figure_get_stats()
-        save_figure(fig, self.save_dir, 'Fig5')
+        save_figure(fig, self.save_dir, 'FigS9')
         print('')
 
     def _run_preprocessing(self):
@@ -73,7 +65,7 @@ class Figure5():
     def _plot_figure_get_stats(self):
         fig = plt.figure(constrained_layout=False, figsize=self.figsize, 
                          dpi=self.figdpi)
-        gs = fig.add_gridspec(4, 8, wspace=2)
+        gs = fig.add_gridspec(4, 8, wspace=20, hspace=2)
 
         # Panel A: Accuracy vs. noise summary
         axA = fig.add_subplot(gs[:, 0:3])
@@ -101,7 +93,7 @@ class Figure5():
         sc_minus_errors = np.array([])
         
         # Stats
-        print('Panel A stats: sc+ vs. sc- accuracy, signed-rank test:')
+        print('Accuracy vs. noise stats, sc+ vs. sc- models, signed-rank test:')
         for n_label, n_sd in zip(self.noise_labels, self.noise_sds):
             # Note: participant accuracy does not vary across noise levels
             u_vals = np.array(self.sc_plus_stats[n_label]['u_accuracy'])
@@ -119,9 +111,9 @@ class Figure5():
                                         np.std(sc_minus_vals) / np.sqrt(N))
 
             # Print stats
-            _, p = wilcoxon(sc_plus_vals, y=sc_minus_vals, mode='approx')
+            _, p = wilcoxon(sc_plus_vals, y=sc_minus_vals)
             print(f'{n_sd} SD noise: p = {p}')
-        print('----------------------------')
+            p_key = f'{nc}_p_val'
      
         # Plot
         ax.plot(self.noise_sds, u_means, linestyle='-', color='k', 
@@ -137,7 +129,7 @@ class Figure5():
                         facecolor=cmap(0.3), label=None)
         ax.fill_between(self.noise_sds, sc_minus_means - sc_minus_errors, 
                         sc_minus_means + sc_minus_errors, alpha=0.2, 
-                        facecolor=cmap(0.7), label=None)
+                        facecolor=cmap(0.3), label=None)
           
         ax.set_xticks(self.noise_sds)
         ax.set_xticklabels(self.noise_sds)
@@ -162,45 +154,38 @@ class Figure5():
         delta_np = np.stack(deltas)
 
         # Plot
-        plot_x = [i + 0.5 for i in range(len(self.noise_labels))]
-        sns.heatmap(delta_np, center=0, cmap=self.heatmap_palette, ax=ax,
-                    vmin=-0.4, vmax=0.4, cbar_kws={'ticks': [-0.25, 0, 0.25]})
-                    
-        ax.set_xticks(plot_x)
+        sns.heatmap(delta_np, center=0, cmap=palette, ax=ax)
+        ax.set_xticks(self.noise_sds)
         ax.set_xticklabels(self.noise_sds)
         ax.set_yticks([])
+        ax.tick_params(axis='both')
         ax.set_ylabel('Models')
+        ax.legend(title=None)
+        ax.get_legend().get_frame().set_linewidth(0.0)  
+        ax.legend(framealpha=0)
         ax.set_xlabel('Noise SD')
 
     def _make_panel_C(self, ax):
-        print('Panel C stats: sc+ vs. sc- error rates, signed-rank test:')
         keys = ['con_error_rate', 'incon_error_rate', 'stay_error_rate', 
                 'switch_error_rate']
         df_keys = ['Congruent', 'Incongruent', 'Stay', 'Switch']
 
-        # Reformat as data frame, print stats
+        # Reformat as data frame
         all_dfs = []
         for key, df_key in zip(keys, df_keys):
-            plus_data = self.sc_plus_stats[self.noise_5C][key]
-            minus_data = self.sc_minus_stats[self.noise_5C][key]
-            plus_df = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc+',
-                                    'p_error': plus_data})
-            minus_df = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc-',
-                                     'p_error': minus_data})
-            all_dfs.append(plus_df)
-            all_dfs.append(minus_df)
-
-            _, p = wilcoxon(plus_data, y=minus_data, mode='approx')
-            print(f'{df_key} error rate: p = {p}')
-        print('----------------------------')
+            sc_plus = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc+',
+                                    'p_error': self.sc_plus_stats[self.noise_5C][key]})
+            sc_minus = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc-',
+                                     'p_error': self.sc_minus_stats[self.noise_5C][key]})
+            all_dfs.append(sc_plus)
+            all_dfs.append(sc_minus)
         df = pd.concat(all_dfs)
 
         # Plot
         params = {'ylim': [0, 0.45],
                   'ylabel': 'Conditional error rate',
                   'xticklabels': df_keys,
-                  'plot_legend': True,
-                  'elinewidth': 0.5}
+                  'plot_legend': True}
         error_type = 'sem'
         bar = BarPlot(df)
         _ = bar.plot_grouped_bar('trial_type', 'p_error', 'model_type',

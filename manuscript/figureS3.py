@@ -112,7 +112,7 @@ class FigureS3():
         u_sem = np.std(u_vals) / np.sqrt(len(u_vals))
         m_sem = np.std(m_vals) / np.sqrt(len(m_vals))
         if noise_key in self.stats_noise:
-            w, p = wilcoxon(u_vals, y=m_vals)
+            w, p = wilcoxon(u_vals, y=m_vals, mode='approx')
             print(f'{u_key[2:]}, {noise_sd}SD noise stats:')
             print(f'Participant vs. model sign-rank p-val: {p}')
             print(f'Participant mean +/- s.e.m.: {u_mean} +/- {u_sem}')
