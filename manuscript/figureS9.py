@@ -14,16 +14,19 @@ from task_dyva.utils import save_figure
 class FigureS9():
     """Analysis methods and plotting routines to reproduce
     Figure S9 from the manuscript (stats on sc+ vs. sc-
-    model accuracy at all noise levels). 
+    model accuracy at all noise levels and for different
+    trial types). 
     """
 
     analysis_dir = 'model_analysis'
     stats_fn = 'behavior_summary.pkl'
+    behavior_keys = ['m_accuracy', 'con_error_rate',
+                     'incon_error_rate', 'stay_error_rate', 
+                     'switch_error_rate']
     noise_labels = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '1']
     noise_sds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    figsize = (6.5, 2)
+    figsize = (7.5, 4)
     figdpi = 300
-    palette = 'viridis'
 
     def __init__(self, model_dir, save_dir, metadata):
         self.model_dir = model_dir
@@ -40,6 +43,8 @@ class FigureS9():
     def make_figure(self):
         print('Making Figure S9...')
         self._run_preprocessing()
+        print('Stats for Figure S9')
+        print('------------------')
         fig = self._plot_figure_get_stats()
         save_figure(fig, self.save_dir, 'FigS9')
         print('')
@@ -65,128 +70,81 @@ class FigureS9():
     def _plot_figure_get_stats(self):
         fig = plt.figure(constrained_layout=False, figsize=self.figsize, 
                          dpi=self.figdpi)
-        gs = fig.add_gridspec(4, 8, wspace=20, hspace=2)
+        gs = fig.add_gridspec(5, 11)
 
-        # Panel A: Accuracy vs. noise summary
-        axA = fig.add_subplot(gs[:, 0:3])
+        # Panel A: Sign-rank p-values at all noise levels
+        axA = fig.add_subplot(gs[:2, 0:3])
         self._make_panel_A(axA)
 
-        # Panel B: Delta accuracy heatmap
-        axB = fig.add_subplot(gs[:, 3:6])
-        self._make_panel_B(axB)
+        # Panel B: Error rate for congruent trials
+        axB = fig.add_subplot(gs[:2, 4:7])
+        B_key, B_title = 'con_error_rate', 'Congruent trials'
+        self._make_error_panel(axB, B_key, B_title)
 
-        # Panel C: Error rate by trial type
-        axC = fig.add_subplot(gs[:, 6:])
-        self._make_panel_C(axC)
+        # Panel C: Error rate for incongruent trials
+        axC = fig.add_subplot(gs[:2, 8:11])
+        C_key, C_title = 'incon_error_rate', 'Incongruent trials'
+        self._make_error_panel(axC, C_key, C_title)
+
+        # Panel D: Error rate for stay trials
+        axD = fig.add_subplot(gs[3:, 0:3])
+        D_key, D_title = 'stay_error_rate', 'Stay trials'
+        self._make_error_panel(axD, D_key, D_title)
+
+        # Panel E: Error rate for switch trials
+        axE = fig.add_subplot(gs[3:, 4:7])
+        E_key, E_title = 'switch_error_rate', 'Switch trials'
+        self._make_error_panel(axE, E_key, E_title)
 
         return fig
 
     def _make_panel_A(self, ax):
-        cmap = sns.color_palette(self.palette, as_cmap=True)
-        N = 25 # number of models
-
-        u_means = np.array([])
-        sc_plus_means = np.array([])
-        sc_minus_means = np.array([])
-        u_errors = np.array([])
-        sc_plus_errors = np.array([])
-        sc_minus_errors = np.array([])
-        
         # Stats
-        print('Accuracy vs. noise stats, sc+ vs. sc- models, signed-rank test:')
+        p_vals = []
+        print('Panel A stats: sc+ vs. sc- accuracy, signed-rank test:')
         for n_label, n_sd in zip(self.noise_labels, self.noise_sds):
-            # Note: participant accuracy does not vary across noise levels
-            u_vals = np.array(self.sc_plus_stats[n_label]['u_accuracy'])
             sc_plus_vals = np.array(self.sc_plus_stats[n_label]['m_accuracy'])
             sc_minus_vals = np.array(self.sc_minus_stats[n_label]['m_accuracy'])
-
-            u_means = np.append(u_means, np.mean(u_vals))
-            sc_plus_means = np.append(sc_plus_means, np.mean(sc_plus_vals))
-            sc_minus_means = np.append(sc_minus_means, np.mean(sc_minus_vals))
-
-            u_errors = np.append(u_errors, np.std(u_vals) / np.sqrt(N))
-            sc_plus_errors = np.append(sc_plus_errors, 
-                                       np.std(sc_plus_vals) / np.sqrt(N))
-            sc_minus_errors = np.append(sc_minus_errors, 
-                                        np.std(sc_minus_vals) / np.sqrt(N))
-
-            # Print stats
-            _, p = wilcoxon(sc_plus_vals, y=sc_minus_vals)
+            _, p = wilcoxon(sc_plus_vals, y=sc_minus_vals, mode='approx')
+            p_vals.append(p)
             print(f'{n_sd} SD noise: p = {p}')
-            p_key = f'{nc}_p_val'
-     
+
         # Plot
-        ax.plot(self.noise_sds, u_means, linestyle='-', color='k', 
-                label='Participants', linewidth=0.5)
-        ax.plot(self.noise_sds, sc_plus_means, linestyle='-', 
-                color=cmap(0.3), label='sc+ models', linewidth=0.5)    
-        ax.plot(self.noise_sds, sc_minus_means, linestyle='-', 
-                color=cmap(0.7), label='sc- models', linewidth=0.5)    
-        ax.fill_between(self.noise_sds, u_means - u_errors, u_means + u_errors, 
-                        alpha=0.2, facecolor='k', label=None)
-        ax.fill_between(self.noise_sds, sc_plus_means - sc_plus_errors, 
-                        sc_plus_means + sc_plus_errors, alpha=0.2, 
-                        facecolor=cmap(0.3), label=None)
-        ax.fill_between(self.noise_sds, sc_minus_means - sc_minus_errors, 
-                        sc_minus_means + sc_minus_errors, alpha=0.2, 
-                        facecolor=cmap(0.3), label=None)
-          
-        ax.set_xticks(self.noise_sds)
-        ax.set_xticklabels(self.noise_sds)
-        ax.set_yticks([0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-        ax.set_ylabel('Accuracy')
-        ax.legend(title=None)
-        ax.get_legend().get_frame().set_linewidth(0.0)  
-        ax.legend(framealpha=0)
+        x = self.noise_sds
+        ax.plot(x, p_vals, linestyle='-', color='b', linewidth=0.5)
+        ax.plot([x[0], x[-1]], [0.05, 0.05], 'k--', linewidth=0.5)
+        ax.set_xticks(x)
+        ax.set_ylabel('Signed-rank test p-value')
         ax.set_xlabel('Noise SD')
 
-    def _make_panel_B(self, ax):
-        # Calculate delta accuracy for each model
-        N = 25 # number of models
-        deltas = []
-        for i in range(N):
-            model_deltas = []
-            for n in self.noise_labels:
-                sc_plus_acc = self.sc_plus_stats[n]['m_accuracy'][i]
-                sc_minus_acc = self.sc_minus_stats[n]['m_accuracy'][i]
-                model_deltas.append(sc_minus_acc - sc_plus_acc)
-            deltas.append(model_deltas)
-        delta_np = np.stack(deltas)
-
+    def _make_error_panel(self, ax, key, title):
+        N = 25
+        ylim = [-0.03, 0.7]
+        sc_plus_means = []
+        sc_minus_means = []
+        sc_plus_sems = []
+        sc_minus_sems = []
+    
+        # Stats
+        for n in self.noise_labels:
+            sc_plus_vals = np.array(self.sc_plus_stats[n][key])
+            sc_minus_vals = np.array(self.sc_minus_stats[n][key])
+            sc_plus_means.append(np.mean(sc_plus_vals))
+            sc_minus_means.append(np.mean(sc_minus_vals))
+            sc_plus_sems.append(np.std(sc_plus_vals) / np.sqrt(N))
+            sc_minus_sems.append(np.std(sc_minus_vals) / np.sqrt(N))
+ 
         # Plot
-        sns.heatmap(delta_np, center=0, cmap=palette, ax=ax)
+        ax.errorbar(self.noise_sds, sc_plus_means, yerr=sc_plus_sems, 
+                    linestyle='-', color='b', label='sc+ models', linewidth=0.5)    
+        ax.errorbar(self.noise_sds, sc_minus_means, yerr=sc_minus_sems, 
+                    linestyle='-', color='g', label='sc- models', linewidth=0.5)    
+      
         ax.set_xticks(self.noise_sds)
         ax.set_xticklabels(self.noise_sds)
-        ax.set_yticks([])
-        ax.tick_params(axis='both')
-        ax.set_ylabel('Models')
-        ax.legend(title=None)
+        ax.set_ylabel('Error rate')
+        ax.set_title(title)
+        ax.legend()
         ax.get_legend().get_frame().set_linewidth(0.0)  
-        ax.legend(framealpha=0)
         ax.set_xlabel('Noise SD')
-
-    def _make_panel_C(self, ax):
-        keys = ['con_error_rate', 'incon_error_rate', 'stay_error_rate', 
-                'switch_error_rate']
-        df_keys = ['Congruent', 'Incongruent', 'Stay', 'Switch']
-
-        # Reformat as data frame
-        all_dfs = []
-        for key, df_key in zip(keys, df_keys):
-            sc_plus = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc+',
-                                    'p_error': self.sc_plus_stats[self.noise_5C][key]})
-            sc_minus = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc-',
-                                     'p_error': self.sc_minus_stats[self.noise_5C][key]})
-            all_dfs.append(sc_plus)
-            all_dfs.append(sc_minus)
-        df = pd.concat(all_dfs)
-
-        # Plot
-        params = {'ylim': [0, 0.45],
-                  'ylabel': 'Conditional error rate',
-                  'xticklabels': df_keys,
-                  'plot_legend': True}
-        error_type = 'sem'
-        bar = BarPlot(df)
-        _ = bar.plot_grouped_bar('trial_type', 'p_error', 'model_type',
-                                 error_type, ax, **params)
+        ax.set_ylim(ylim)

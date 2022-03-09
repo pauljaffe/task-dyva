@@ -101,7 +101,6 @@ class Figure5():
         sc_minus_errors = np.array([])
         
         # Stats
-        print('Panel A stats: sc+ vs. sc- accuracy, signed-rank test:')
         for n_label, n_sd in zip(self.noise_labels, self.noise_sds):
             # Note: participant accuracy does not vary across noise levels
             u_vals = np.array(self.sc_plus_stats[n_label]['u_accuracy'])
@@ -117,11 +116,6 @@ class Figure5():
                                        np.std(sc_plus_vals) / np.sqrt(N))
             sc_minus_errors = np.append(sc_minus_errors, 
                                         np.std(sc_minus_vals) / np.sqrt(N))
-
-            # Print stats
-            _, p = wilcoxon(sc_plus_vals, y=sc_minus_vals, mode='approx')
-            print(f'{n_sd} SD noise: p = {p}')
-        print('----------------------------')
      
         # Plot
         ax.plot(self.noise_sds, u_means, linestyle='-', color='k', 
@@ -197,7 +191,7 @@ class Figure5():
 
         # Plot
         params = {'ylim': [0, 0.45],
-                  'ylabel': 'Conditional error rate',
+                  'ylabel': 'Error rate',
                   'xticklabels': df_keys,
                   'plot_legend': True,
                   'elinewidth': 0.5}
