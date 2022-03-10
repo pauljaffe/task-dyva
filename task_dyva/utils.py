@@ -1,4 +1,5 @@
 import os
+import itertools
 
 import torch
 import numpy as np
@@ -235,7 +236,7 @@ def expt_stats_to_df(metrics, expts, age_bins, stats):
     return df
 
 
-def get_stimulus_combos(self):
+def get_stimulus_combos():
     # Returns tuples of all possible stimulus combinations for 
     # a single trial (move, point, task cue)
     combos = list(itertools.product([0, 1, 2, 3],
