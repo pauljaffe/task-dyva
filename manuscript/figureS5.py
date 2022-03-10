@@ -17,7 +17,8 @@ class FigureS5():
     analysis_dir = 'model_analysis'
     stats_fn = 'behavior_summary.pkl'
     noise_key = '04'
-    figsize = (16, 4.5)
+    figsize = (7, 2.1)
+    figdpi = 300
     line_ext = 10
 
     def __init__(self, model_dir, save_dir, metadata):
@@ -29,8 +30,7 @@ class FigureS5():
         # Containers for summary stats
         self.group_stats = {'m_switch_cost': [], 'u_switch_cost': [],
                             'm_mean_rt': [], 'u_mean_rt': [], 
-                            'm_con_effect': [], 'u_con_effect': [], 
-                            'u_rt_sd': [], 'm_rt_sd': []}
+                            'm_con_effect': [], 'u_con_effect': []}
 
     def make_figure(self):
         print('Making Figure S5...')
@@ -52,12 +52,13 @@ class FigureS5():
             stats_path = os.path.join(self.model_dir, expt_str, 
                                       self.analysis_dir, self.stats_fn)
             with open(stats_path, 'rb') as path:
-                expt_stats = pickle.load(path)
+                stats = pickle.load(path)
             for key in self.group_stats.keys():
-                self.group_stats[key].append(expt_stats[self.noise_key][key])
+                self.group_stats[key].append(stats[self.noise_key][key])
 
     def _plot_figure_get_stats(self):
-        fig, axes = plt.subplots(1, 3, figsize=self.figsize)
+        fig, axes = plt.subplots(1, 3, figsize=self.figsize,
+                                 dpi=self.figdpi)
 
         # Panel A: Mean RT scatter
         A_params = {'ax_lims': [600, 1250],
@@ -76,5 +77,7 @@ class FigureS5():
                     'metric': 'con_effect',
                     'label': 'congruency effect (ms)'}
         plot_scatter(self.group_stats, C_params, axes[2], self.line_ext)
+
+        plt.tight_layout()
 
         return fig

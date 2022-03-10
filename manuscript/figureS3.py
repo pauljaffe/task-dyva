@@ -17,7 +17,8 @@ class FigureS3():
 
     analysis_dir = 'model_analysis'
     stats_fn = 'behavior_summary.pkl'
-    figsize = (6, 8)
+    figsize = (7, 1.5)
+    figdpi = 300
 
     noise_labels = ['01', '015', '02', '025', '03', '035', '04', '045',
                     '05', '055', '06']
@@ -67,7 +68,8 @@ class FigureS3():
                     self.all_stats[noise][key].append(this_stats[noise][key])
 
     def _plot_figure_get_stats(self):
-        fig, axes = plt.subplots(3, 1, figsize=self.figsize)
+        fig, axes = plt.subplots(1, 3, figsize=self.figsize,
+                                 dpi=self.figdpi)
         for key, label, ax in zip(self.plot_keys, self.plot_labels, axes):
             u_key = f'u_{key}'
             m_key = f'm_{key}'
@@ -94,13 +96,14 @@ class FigureS3():
             ax.set_xticklabels(self.noise_sds)
             ax.set_ylabel(label)
             if key == 'accuracy':
-                #ax.legend(title=None)
                 ax.legend()
                 ax.get_legend().get_frame().set_linewidth(0.0)   
-            if key == 'acc_switch_cost':
+            if key == 'acc_con_effect':
                 ax.set_xlabel('Noise SD')
             else:
                 ax.set_xlabel('')
+
+        plt.tight_layout()
 
         return fig
 
@@ -114,7 +117,7 @@ class FigureS3():
         if noise_key in self.stats_noise:
             w, p = wilcoxon(u_vals, y=m_vals, mode='approx')
             print(f'{u_key[2:]}, {noise_sd}SD noise stats:')
-            print(f'Participant vs. model sign-rank p-val: {p}')
+            print(f'Participant vs. model signed-rank p-val: {p}')
             print(f'Participant mean +/- s.e.m.: {u_mean} +/- {u_sem}')
             print(f'Model mean +/- s.e.m.: {m_mean} +/- {m_sem}')
             print('----------------------------------')

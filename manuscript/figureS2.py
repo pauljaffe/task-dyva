@@ -17,6 +17,7 @@ class FigureS2():
     analysis_dir = 'model_analysis'
     stats_fn = 'holdout_outputs_01SD.pkl'
     figsize = (14, 20)
+    figdpi = 300
     age_bin_strs = ['ages20to29', 'ages30to39', 'ages40to49', 'ages50to59', 
                 'ages60to69', 'ages70to79', 'ages80to89']
     age_bin_labels= ['Ages 20 to 29', 'Ages 30 to 39', 'Ages 40 to 49', 
@@ -57,7 +58,8 @@ class FigureS2():
             self.all_stats[ab].append(expt_stats)
 
     def _plot_figure(self):
-        fig, axes = plt.subplots(10, 7, figsize=self.figsize)
+        fig, axes = plt.subplots(10, 7, figsize=self.figsize,
+                                 dpi=self.figdpi)
         rt_plot_type = 'all'
 
         for ab_ind, ab in enumerate(self.age_bin_strs):    

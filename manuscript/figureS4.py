@@ -17,7 +17,8 @@ class FigureS4():
 
     analysis_dir = 'model_analysis'
     stats_fn = 'holdout_outputs_01SD.pkl'
-    figsize = (9, 4.5)
+    figsize = (4.5, 2)
+    figdpi = 300
     line_ext = 0.1
     age_bin_labels = ['20-29', '30-39', '40-49', '50-59', 
                       '60-69', '70-79', '80-89']
@@ -64,7 +65,8 @@ class FigureS4():
                 self.group_stats[key].append(expt_stats.summary_stats[key])
 
     def _plot_figure_get_stats(self):
-        fig, axes = plt.subplots(1, 2, figsize=self.figsize)
+        fig, axes = plt.subplots(1, 2, figsize=self.figsize,
+                                 dpi=self.figdpi)
 
         # Panel A: Model vs. participant scatter for RT SD
         A_params = {'ax_lims': [20, 350],
@@ -84,4 +86,8 @@ class FigureS4():
         B_bar = BarPlot(stats_df)
         B_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
                                error_type, axes[1], **B_params)
+        axes[1].set_xlabel('Age bin (years)')
+
+        plt.tight_layout()
+
         return fig

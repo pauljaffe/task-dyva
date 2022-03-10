@@ -111,7 +111,7 @@ class BarPlot():
         width = kwargs.get('width', 0.35)
         x_offset = -width / 2
         hue_types = self.df[hue].unique()
-        elinewidth = kwargs.get('elinewidth', 1)
+        elinewidth = kwargs.get('elinewidth', 0.5)
         error_kw = {'elinewidth': elinewidth}
         for i, h in enumerate(hue_types):
             group_df = self.df.query(f'{hue} == @h')

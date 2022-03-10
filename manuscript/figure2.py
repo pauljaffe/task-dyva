@@ -17,19 +17,20 @@ class Figure2():
 
     analysis_dir = 'model_analysis'
     stats_fn = 'holdout_outputs_01SD.pkl'
-    figsize = (16, 17)
     line_ext = 10
     age_bin_labels = ['20-29', '30-39', '40-49', '50-59', 
                       '60-69', '70-79', '80-89']
+    figsize = (7, 6.5)
+    figdpi = 300
     palette = 'viridis'
 
     # Exemplars
     exemplar_ids = {1076: 'A1',
-                    1194: 'A2',
+                    1434: 'A2',
                     2247: 'B1',
-                    1917: 'B2',
+                    2347: 'B2',
                     734: 'C1',
-                    3469: 'C2'}
+                    910: 'C2'}
 
     def __init__(self, model_dir, save_dir, metadata):
         self.model_dir = model_dir
@@ -83,8 +84,9 @@ class Figure2():
                 self.exemplars[self.exemplar_ids[uid]] = expt_stats
 
     def _plot_figure_get_stats(self):
-        fig = plt.figure(constrained_layout=False, figsize=self.figsize)
-        gs = fig.add_gridspec(20, 18, wspace=20, hspace=2)
+        fig = plt.figure(constrained_layout=False, figsize=self.figsize,
+                         dpi=self.figdpi)
+        gs = fig.add_gridspec(24, 25)
 
         ######################################
         # Panels A-C: Example RT distributions
@@ -93,15 +95,15 @@ class Figure2():
 
         # Panel A: Mean RT
         ABC_axes['A1'] = fig.add_subplot(gs[0:6, 0:3])
-        ABC_axes['A2'] = fig.add_subplot(gs[0:6, 3:6])
+        ABC_axes['A2'] = fig.add_subplot(gs[0:6, 4:7])
 
         # Panel B: Switch cost
-        ABC_axes['B1'] = fig.add_subplot(gs[0:6, 6:9])
-        ABC_axes['B2'] = fig.add_subplot(gs[0:6, 9:12])
+        ABC_axes['B1'] = fig.add_subplot(gs[0:6, 9:12])
+        ABC_axes['B2'] = fig.add_subplot(gs[0:6, 13:16])
 
         # Panel C: Congruency effect
-        ABC_axes['C1'] = fig.add_subplot(gs[0:6, 12:15])
-        ABC_axes['C2'] = fig.add_subplot(gs[0:6, 15:18])
+        ABC_axes['C1'] = fig.add_subplot(gs[0:6, 18:21])
+        ABC_axes['C2'] = fig.add_subplot(gs[0:6, 22:25])
         self._make_panels_ABC(ABC_axes)
 
         #################################################
@@ -111,21 +113,21 @@ class Figure2():
         D_params = {'ax_lims': [600, 1250],
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
-        D_ax = fig.add_subplot(gs[7:13, 0:6])
+        D_ax = fig.add_subplot(gs[8:15, 0:7])
         plot_scatter(self.group_stats, D_params, D_ax, self.line_ext)
 
         # Panel E: Switch cost
         E_params = {'ax_lims': [-25, 300],
                     'metric': 'switch_cost',
                     'label': 'switch cost (ms)'}
-        E_ax = fig.add_subplot(gs[7:13, 6:12])
+        E_ax = fig.add_subplot(gs[8:15, 9:16])
         plot_scatter(self.group_stats, E_params, E_ax, self.line_ext)
         
         # Panel F: Congruency effect
         F_params = {'ax_lims': [0, 300],
                     'metric': 'con_effect',
                     'label': 'congruency effect (ms)'}
-        F_ax = fig.add_subplot(gs[7:13, 12:18])
+        F_ax = fig.add_subplot(gs[8:15, 18:25])
         plot_scatter(self.group_stats, F_params, F_ax, self.line_ext)
 
         #################################################
@@ -144,7 +146,7 @@ class Figure2():
                     'ylabel': 'Mean RT (ms)',
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': True}
-        G_ax = fig.add_subplot(gs[14:20, 0:6])
+        G_ax = fig.add_subplot(gs[17:24, 0:7])
         G_bar = BarPlot(G_df)
         _ = G_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
                                    error_type, G_ax, **G_params)
@@ -156,7 +158,7 @@ class Figure2():
                     'ylabel': 'Switch cost (ms)',
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': False}
-        H_ax = fig.add_subplot(gs[14:20, 6:12])
+        H_ax = fig.add_subplot(gs[17:24, 9:16])
         H_bar = BarPlot(H_df)
         _ = H_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
                                    error_type, H_ax, **H_params)
@@ -167,7 +169,7 @@ class Figure2():
                     'ylabel': 'Congruency effect (ms)',
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': False}
-        I_ax = fig.add_subplot(gs[14:20, 12:18])
+        I_ax = fig.add_subplot(gs[17:24, 18:25])
         I_bar = BarPlot(I_df)
         _ = I_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
                                    error_type, I_ax, **I_params)
@@ -190,9 +192,8 @@ class Figure2():
             ax = plotter.plot_rt_dists(ax, plot_type)
 
             if key == 'A1':
-                ax.get_legend().set_title(None)
-                ax.get_legend().get_frame().set_linewidth(0.0)
                 ax.legend(labels=['Participant', 'Model'])
+                ax.get_legend().get_frame().set_linewidth(0.0)
                 ax.set_ylabel('RT (ms)')
             else:
                 ax.get_legend().remove()
