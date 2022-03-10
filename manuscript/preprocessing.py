@@ -10,11 +10,10 @@ from task_dyva.model_analysis import FixedPointFinder, LatentsLDA
 
 
 class Preprocess():
-    # TODO: finish docstring
     """Run preprocessing for the manuscript:
-    1) COMPLETE
-    of stimulus noise (using the holdout data). 
+    1) Get the model outputs on the test set at different noise levels.
     2) Find stable fixed points for each model.
+    3) Run the LDA analyses (Fig. 3).
     """
 
     analysis_dir = 'model_analysis'
