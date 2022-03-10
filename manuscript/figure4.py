@@ -43,6 +43,7 @@ class Figure4():
 
     def make_figure(self):
         print('Making Figure 4...')
+        print('Note: PearsonRConstantInputWarning is handled sensibly; see Methods')
         self._run_preprocessing()
         print('Stats for Figure 4')
         print('------------------')
