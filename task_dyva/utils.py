@@ -233,3 +233,12 @@ def expt_stats_to_df(metrics, expts, age_bins, stats):
             df = df.append(new_u_row, ignore_index=True)
             df = df.append(new_m_row, ignore_index=True) 
     return df
+
+
+def get_stimulus_combos(self):
+    # Returns tuples of all possible stimulus combinations for 
+    # a single trial (move, point, task cue)
+    combos = list(itertools.product([0, 1, 2, 3],
+                                    [0, 1, 2, 3],
+                                    [0, 1]))
+    return combos

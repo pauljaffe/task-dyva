@@ -8,6 +8,8 @@ import pandas as pd
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from scipy.stats import pearsonr
 
+from .utils import get_stimulus_combos
+
 
 class FixedPointFinder():
     # Find stable fixed points from a supplied model.
@@ -27,7 +29,7 @@ class FixedPointFinder():
         self.t_win = t_search_win
         self.max_sd_tol = max_sd_tol
         self.max_dist_tol = max_dist_tol
-        self.stimulus_combos = get_all_trial_combos()
+        self.stimulus_combos = get_stimulus_combos()
         self.rng = np.random.default_rng(rand_seed)
 
     def find_fixed_points(self, N, T):
@@ -44,7 +46,7 @@ class FixedPointFinder():
             z0 = self._make_z0(N)
 
             for c in self.stimulus_combos:
-                pt, mv, cue = c[0], c[1], c[2]
+                mv, pt, cue = c[0], c[1], c[2]
                 c_stimuli = self._make_fp_stimuli(N, T, pt=pt, mv=mv, cue=cue)
                 # Generate responses
                 _, _, _, z_out, _, _ = self.expt.model.forward(c_stimuli,
@@ -331,12 +333,7 @@ class LatentSeparation():
         self.min_N = min_N
         self.t0_ind = expt_stats.n_pre
         self._get_task_centroids()
-        self._get_stimulus_combos()
-
-    def _get_stimulus_combos(self):
-        self.combos = list(itertools.product([0, 1, 2, 3],
-                                             [0, 1, 2, 3],
-                                             [0, 1]))
+        self.combos = get_stimulus_combos()
 
     def _get_task_centroids(self):
         # Calculate latent state centroids at the mean RT for each task
