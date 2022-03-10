@@ -2,6 +2,7 @@
 name = "task-dyva"
 version = "0.1.0"
 description = "task-DyVA"
+license = "MIT"
 authors = ["Paul Jaffe <pauljaffe7@gmail.com>"]
 readme = "README.md"
 homepage = "https://github.com/pauljaffe/task-dyva"
