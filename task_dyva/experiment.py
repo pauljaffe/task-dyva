@@ -149,8 +149,7 @@ class Experiment(nn.Module,
                     val_to_log = {'loss': val_loss, 'NLL': val_NLL}
                     self._log_metrics(val_to_log, 'val', epoch)
                     self._save_checkpoint(epoch)
-                    val_metrics = self.get_behavior_metrics(self.val_dataset, 
-                                                            epoch, 'val')
+                    val_metrics = self.get_behavior_metrics(self.val_dataset)
                     self._log_metrics(val_metrics.summary_stats, 'val', 
                                       epoch, epoch_end=True)
 
@@ -523,8 +522,8 @@ class Experiment(nn.Module,
                                     device=self.device, requires_grad=False)
         self.anneal_param = torch.min(anneal_param, self._max_anneal)
 
-    def get_behavior_metrics(self, dataset, save_fn, save_local=False, 
-                             load_local=True, analyze_latents=False,
+    def get_behavior_metrics(self, dataset, save_fn=None, save_local=False, 
+                             load_local=False, analyze_latents=False,
                              get_model_outputs=True, stats_dir=None,
                              **kwargs):
         """Get behavioral stats for user and model from the supplied dataset.
@@ -555,8 +554,8 @@ class Experiment(nn.Module,
 
         if stats_dir is None:
             stats_dir = 'model_analysis'
-        stats_path = os.path.join(self.base_dir, stats_dir, save_fn)
         if load_local:
+            stats_path = os.path.join(self.base_dir, stats_dir, save_fn)
             if os.path.exists(stats_path):
                 with open(stats_path, 'rb') as path:
                     stats = pickle.load(path)
@@ -588,6 +587,7 @@ class Experiment(nn.Module,
         stats = stats_obj.get_stats()
 
         if save_local:
+            stats_path = os.path.join(self.base_dir, stats_dir, save_fn)
             os.makedirs(os.path.join(self.base_dir, stats_dir), 
                         exist_ok=True)
             with open(stats_path, 'wb') as path:

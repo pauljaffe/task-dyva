@@ -1,4 +1,4 @@
-# Run the analyses and reproduce the figures from the manuscript
+# Run the analyses and reproduce the figures from the paper.
 import os
 
 import pandas as pd
@@ -21,20 +21,21 @@ from manuscript.figureS9 import FigureS9
 
 # Notes
 # -------------
-# 1) To recreate the figures and calculate summary statistics, 
-# set the paths to the models, metadata, and save folder below.
-# Then run the command: poetry run python3 ./make_paper.py 
-# in a terminal window (poetry must be installed; see README). 
+# 1) To reproduce the figures and analyses, set the paths to the models/data, 
+# metadata, and save folder below. Then run the command: 
+# poetry run python3 ./make_paper.py in a terminal window (poetry must 
+# be installed; see README). 
 
 # 2) To rerun all preprocessing, set the four "reload_#" variables to False.
 # The full preprocessing pipeline takes a long time to run
 # (~12 hours on a 2017 MacBook Pro w/ a 2.8GHz processor & 16Gb RAM).
 
-# 3) To recreate the figures and calculate summary statistics using
-# precomputed preprocessing outputs, set the four "reload_#" variables to True
-# (this will take several minutes to run). 
+# 3) To reproduce the figures and analyses using the precomputed preprocessing 
+# outputs, set the four "reload_#" variables to True (this will take several 
+# minutes to run). 
 
-# 4) A subset of the figures can be recreated by commenting out the code below.
+# 4) A subset of the figures/analyses can be reproduced by commenting 
+# out the code below.
 
 
 # Toggle reloading precomputed preprocessing outputs
@@ -43,10 +44,10 @@ reload_behavior_summary = True
 reload_fixed_points = True
 reload_lda_summary = True
 
-# Specify paths to models, metadata, and a folder to save figures
-model_dir = '/PATH/TO/MODELS'
-expt_metadata_path = '/PATH/TO/METADATA'
-figure_dir = '/PATH/TO/SAVE/FOLDER'
+# Specify paths to models/data, metadata, and a folder to save figures
+model_dir = '/PATH/TO/MODELS/AND/DATA'  # change
+expt_metadata_path = '/PATH/TO/METADATA'  # change
+figure_dir = '/PATH/TO/SAVE/FOLDER'  # change
 os.makedirs(figure_dir, exist_ok=True)
 metadata = pd.read_csv(expt_metadata_path, header=0)
 
@@ -67,11 +68,11 @@ preprocessing = Preprocess(model_dir, metadata,
 preprocessing.run_preprocessing()
 
 # MAIN FIGURES
-#fig2 = Figure2(model_dir, figure_dir, metadata)
-#fig2.make_figure()
+fig2 = Figure2(model_dir, figure_dir, metadata)
+fig2.make_figure()
 
-#fig3 = Figure3(model_dir, figure_dir, metadata)
-#fig3.make_figure()
+fig3 = Figure3(model_dir, figure_dir, metadata)
+fig3.make_figure()
 
 fig4 = Figure4(model_dir, figure_dir, metadata)
 fig4.make_figure()

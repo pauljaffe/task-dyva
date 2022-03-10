@@ -98,7 +98,7 @@ class Preprocess():
                           device=self.device, **expt_kwargs)
 
         expt_stats = expt.get_behavior_metrics(expt.test_dataset, 
-                                               save_str,
+                                               save_fn=save_str,
                                                save_local=True,
                                                load_local=try_reload,
                                                analyze_latents=analyze_latents,
