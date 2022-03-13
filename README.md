@@ -19,7 +19,7 @@ The easiest and recommended way to reproduce the results from the paper is as fo
 git clone https://github.com/pauljaffe/task-dyva
 ```
 
-2) Install Poetry to manage the dependencies: https://python-poetry.org/docs/
+2) Install Poetry to manage the dependencies (see https://python-poetry.org/docs/). After installing, make sure that Poetry's bin directory is in the 'PATH' environment variable by running `source $HOME/.poetry/env` from the command line. 
 
 3) Install the task-DyVA dependencies: Run `poetry install` from the command line within the local task-dyva repo. The complete set of dependencies is listed in pyproject.toml.
 
