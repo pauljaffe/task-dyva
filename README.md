@@ -3,7 +3,8 @@ Task-DyVA
 
 Task-DyVA (pronounced dee-vuh) is a framework for modeling sequential response time data from cognitive tasks. This repo contains code to train models and reproduce the analyses from the paper. 
 
-Preprint: ###
+Preprint: ### 
+
 Trained models & data: ###
 
 
