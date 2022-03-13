@@ -10,13 +10,13 @@ from task_dyva import Experiment
 # to be used for model training. 
 
 # To run the model training, run:
-# poetry run python3 ./example_training_script.py
+# poetry run python3 ./training_script.py
 # from the command line.
 
 # Notes
 # -----
 # 1) To test that everything is correctly configured, run the test
-# model training script in examples/test_model_training. 
+# model training script in examples/check_model_training. 
 
 # 2) While training on CPU is supported, training on GPU is strongly 
 # recommended (toggle by setting the "device" parameter below).

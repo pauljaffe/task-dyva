@@ -11,7 +11,7 @@ from task_dyva import Experiment
 # checkpoints, processed_data, and some metadata.
 
 # To run the model training, run:
-# poetry run python3 ./test_training_script.py
+# poetry run python3 ./training_script.py
 # from the command line.
 
 # Notes

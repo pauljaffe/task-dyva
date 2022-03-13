@@ -1,4 +1,5 @@
 # Test Experiment class
+# NOTE: The NEPTUNE_PROJECT environment variable must be set for this test to work!
 import os
 import copy
 import time
