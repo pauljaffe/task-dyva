@@ -193,13 +193,13 @@ def plot_scatter(group_stats, params, ax, line_ext):
     plot_x = np.array([min(u_vals) - line_ext, 
                        max(u_vals) + line_ext])
     m, b = np.polyfit(u_vals, m_vals, 1)
-    ax.plot(plot_x, m * plot_x + b, 'r--', zorder=2, linewidth=0.5)
+    ax.plot(plot_x, m * plot_x + b, 'r--', zorder=1, linewidth=0.5)
 
     # Plot unity line
-    ax.plot(plot_x, plot_x, 'k-', zorder=2, linewidth=0.5)
+    ax.plot(plot_x, plot_x, 'k-', zorder=1, linewidth=0.5)
     
     # Plot all individuals
-    ax.scatter(u_vals, m_vals, s=0.5, marker='o', zorder=1)
+    ax.scatter(u_vals, m_vals, s=0.2, marker='o', zorder=2, alpha=0.8)
     ax.set_xlabel(f"Participant {params['label']}")
     ax.set_ylabel(f"Model {params['label']}")
     ax.set_xlim(params['ax_lims'])
