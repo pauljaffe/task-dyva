@@ -29,8 +29,7 @@ from task_dyva import Experiment
 
 # Some finagling to get the paths set
 experiment_dir = os.path.dirname(os.path.abspath(__file__))
-#raw_data_dir = '/PATH/TO/DATA'  # change
-raw_data_dir = '/Users/paul.jaffe/Dropbox/Manuscripts/task-DyVA/models_data/test'
+raw_data_dir = '/PATH/TO/DATA'  # change
 raw_data_fn = 'data_pre_split.pickle'
 processed_data_dir = os.path.join(experiment_dir, 'processed_data')
 expt_name = 'name_your_experiment'
