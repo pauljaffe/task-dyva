@@ -10,7 +10,7 @@ from task_dyva import Experiment
 # to be used for model training. 
 
 # To run the model training, run:
-# poetry run python3 ./training_script.py
+# poetry run python3 training_script.py
 # from the command line.
 
 # Notes

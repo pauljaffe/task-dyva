@@ -27,10 +27,10 @@ git clone https://github.com/pauljaffe/task-dyva
 
 5) Change the paths in make_paper.py to the local copies of the models/data, metadata, and a folder to save the figures. 
 
-6) Run the script to make the figures and reproduce the analyses:
+6) Run the script to make the figures and reproduce the analyses from the top-level directory of the task-DyVA repo:
 
 ```
-poetry run python3 ./make_paper.py
+poetry run python3 make_paper.py
 ```
 
 Note: To rerun only a subset of the analyses, comment out the relevant code in make_paper.py. See the notes at the top of make_paper.py for additional options and info.
@@ -42,7 +42,7 @@ Quick start guide to model training
 To get started with training new models, do steps 1-4 above, then run the model training test script in examples/check_model_training from the command line:
 
 ```
-poetry run python3 ./training_script.py
+poetry run python3 training_script.py
 ```
 
 This is a toy example and will only run for a few epochs. To train a model with the same parameters as used in the paper, see examples/model_training_example/training_script.py. 
