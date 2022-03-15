@@ -105,9 +105,11 @@ class FigureS9():
         for n_label, n_sd in zip(self.noise_labels, self.noise_sds):
             sc_plus_vals = np.array(self.sc_plus_stats[n_label]['m_accuracy'])
             sc_minus_vals = np.array(self.sc_minus_stats[n_label]['m_accuracy'])
+            mean_diff = np.mean(sc_plus_vals - sc_minus_vals)
+            sc_plus_acc_higher = mean_diff > 0
             _, p = wilcoxon(sc_plus_vals, y=sc_minus_vals, mode='approx')
             p_vals.append(p)
-            print(f'{n_sd} SD noise: p = {p}')
+            print(f'{n_sd} SD noise: p = {p}; sc+ higher acc.: {sc_plus_acc_higher}')
 
         # Plot
         x = self.noise_sds

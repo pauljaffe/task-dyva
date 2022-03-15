@@ -186,6 +186,7 @@ class Figure5():
 
             _, p = wilcoxon(plus_data, y=minus_data, mode='approx')
             print(f'{df_key} error rate: p = {p}')
+            print(f'sc+ mean: {np.mean(plus_data)}; sc- mean: {np.mean(minus_data)}')
         print('----------------------------')
         df = pd.concat(all_dfs)
 

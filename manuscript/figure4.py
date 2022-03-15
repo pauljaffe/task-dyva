@@ -183,7 +183,8 @@ class Figure4():
 
         # Stats
         r, p = pearsonr(ds, scs)
-        print(f'Normed dist. vs. model switch costs: r = {r}, p = {p}')
+        print(f'Panel C, normed dist. vs. model switch costs: r = {r}, p = {p}')
+        print('-----------------------------')
 
     def _make_panel_D(self, ax1, ax2):
         t_post = 1200

@@ -54,7 +54,7 @@ class FixedPointFinder():
                                                                clamp=True,
                                                                z0_supplied=z0)
                 z_np = z_out.detach().numpy()
-                c_fps = self._check_for_fps(z_np, c, N)
+                c_fps = self._check_for_fps(z_np, N, pt=pt, mv=mv, cue=cue)
                 if c_fps is not None:
                     all_fps.extend(c_fps)
 
@@ -154,7 +154,7 @@ class FixedPointFinder():
             stimuli[:, :, cue_start_ind + cue] = 1
         return stimuli
 
-    def _check_for_fps(self, z, stimuli, N):
+    def _check_for_fps(self, z, N, pt=None, mv=None, cue=None):
         # Find and validate fixed points from the latent state
         win_samples = self.t_win // self.t_step # window to look for fps
         z_win = z[-win_samples:, :, :]
@@ -163,9 +163,6 @@ class FixedPointFinder():
         stable_inds = np.nonzero(z_mean_sd <= self.max_sd_tol)[0]
         nonstable_inds = np.nonzero(z_mean_sd > self.max_sd_tol)[0]
         z_means = np.mean(z_win, axis=0)
-        fp_pt = stimuli[0]
-        fp_mv = stimuli[1]
-        fp_cue = stimuli[2]
 
         if len(stable_inds) == 0:
             fps = None
@@ -182,7 +179,7 @@ class FixedPointFinder():
                 if new_fp:
                     stable_z.append(si_z)
                     this_fp = pd.DataFrame({'type': fp_type, 'zloc': [si_z],
-                                            'cue': fp_cue, 'mv': fp_mv, 'pt': fp_pt})
+                                            'cue': cue, 'mv': mv, 'pt': pt})
                     fps.append(this_fp)
         return fps
 
