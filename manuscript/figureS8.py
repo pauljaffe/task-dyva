@@ -100,7 +100,7 @@ class FigureS8():
 
         # Plot all models
         for plus, minus in zip(sc_plus, sc_minus):
-            ax.plot([0, 1], [plus, minus], 'b-', alpha=0.1, 
+            ax.plot([0, 1], [plus, minus], 'b-', alpha=0.5, 
                     zorder=1, linewidth=0.5)
 
         # Plot mean +/- s.e.m.
