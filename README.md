@@ -3,9 +3,9 @@ Task-DyVA
 
 Task-DyVA (pronounced dee-vuh) is a framework for modeling sequential response time data from cognitive tasks. This repo contains code to train models and reproduce the analyses from the paper. 
 
-Preprint: ### 
+Preprint: Jaffe PI, Poldrack RA, Schafer RJ, Bissett PG. 2022. Discovering dynamical models of human behavior. bioRxiv. 
 
-Trained models & data: ###
+Trained models & data: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6368413.svg)](https://doi.org/10.5281/zenodo.6368413)
 
 
 Reproduce the figures and analyses from the paper
@@ -23,7 +23,7 @@ git clone https://github.com/pauljaffe/task-dyva
 
 3) Install the task-DyVA dependencies: Run `poetry install` from the command line within the local task-dyva repo. The complete set of dependencies is listed in pyproject.toml.
 
-4) Download the models, data, and metadata: ###
+4) Download the models, data, and metadata linked above. 
 
 5) Change the paths in make_paper.py to the local copies of the models/data, metadata, and a folder to save the figures. 
 
