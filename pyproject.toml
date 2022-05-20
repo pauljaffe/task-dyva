@@ -11,7 +11,7 @@ repository = "https://github.com/pauljaffe/task-dyva"
 [tool.poetry.dependencies]
 python = "^3.7"
 numpy = "1.20.2"
-torch = "1.8.1"
+torch = "^1.11.0"
 scipy = "1.6.1"
 seaborn = "~0.11"
 PyYAML = "^5.4.1"
