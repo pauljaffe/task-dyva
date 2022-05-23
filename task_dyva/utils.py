@@ -60,7 +60,8 @@ class ConfigMixin:
                          'data_augmentation_type', 'data_aug_kernel_bandwidth',
                          'aug_rt_sd', 'aug_resample_frac', 'upscale_mult', 
                          'min_trials', 'post_resp_buffer', 'smoothing_type',
-                         'kernel_sd', 'match_accuracy', 'rt_method'}
+                         'kernel_sd', 'match_accuracy', 'rt_method',
+                         'init_kernel_sd', 'final_kernel_sd', 'kernel_delta_epochs'}
 
     _experiment_params = {'split_indices', 'processed_save_dir', 'mode',
                           'do_logging', 'do_early_stopping', 'params_to_load'}

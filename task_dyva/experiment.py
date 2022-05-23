@@ -8,6 +8,7 @@ import pickle
 import glob
 import re
 import copy
+import pdb
 
 import torch
 from torch.optim import Adadelta, Adam
@@ -136,6 +137,9 @@ class Experiment(nn.Module,
         train_loader = self._get_data_loader(self.train_dataset)
         val_loader = self._get_data_loader(self.val_dataset)
         for epoch in range(self.start_epoch, self.num_epochs):
+            train_loader.dataset.update_smoothing(epoch)
+            val_loader.dataset.update_smoothing(epoch)
+
             self.train()
             train_NLL, train_loss = self._batch_train(train_loader, 'train')
 
@@ -187,6 +191,7 @@ class Experiment(nn.Module,
 
                 if self.iteration % self.update_every == 0:
                     self._update_anneal_param()
+
                 this_NLL, this_loss = self.objective(self.model, loaded_batch,
                                                      self.anneal_param)
                 this_loss.backward()
@@ -457,6 +462,13 @@ class Experiment(nn.Module,
             self.early_stopping.counter = self.checkpoint.get(
                 'stop_counter', 0)
 
+    def _get_samples_for_plot(self, dataset, inds):
+        plot_data = copy.deepcopy(dataset)
+        plot_xu = copy.deepcopy(dataset.xu)[:, inds, :]
+        plot_data.xu = plot_xu
+        plot_loader = self._get_data_loader(plot_data, shuffle=False)
+        return next(iter(plot_loader)).batch.to(self.device)
+
     def plot_generated_sample(self, epoch, dataset, do_plot=False, 
                               sample_ind=None, stim_ylims=None,
                               resp_ylims=None):
@@ -491,9 +503,13 @@ class Experiment(nn.Module,
             gen_inds = [sample_ind, 0]
 
         # Generate model outputs from dataset
-        xu_sample = dataset.xu[:, gen_inds, :].to(self.device)
-        gen_outputs = self.model.forward(xu_sample, generate_mode=True, 
-                                         clamp=False)
+#        xu_sample = dataset[gen_inds].to(self.device)
+        plot_batch = self._get_samples_for_plot(dataset, gen_inds)
+#        xu_sample = dataset.xu[:, gen_inds, :].to(self.device)
+        gen_outputs = self.model(plot_batch, generate_mode=True,
+                                 clamp=False)
+#        gen_outputs = self.model.forward(xu_sample, generate_mode=True, 
+#                                         clamp=False)
         rate_out = gen_outputs[1].mean
         rate_np = rate_out.cpu().detach()[:, 0, :].squeeze().numpy()
         trial = dataset.get_processed_sample(gen_inds[0])

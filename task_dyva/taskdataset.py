@@ -12,6 +12,7 @@ import copy
 import pickle
 from itertools import product
 from collections import defaultdict
+import pdb
 
 import torch
 from torch.utils.data import Dataset
@@ -32,7 +33,7 @@ class EbbFlowDataset(Dataset):
     Data are stored in two separate formats with a one-to-one correspondence: 
     self.xu contains the model inputs: this is the "continuous" format.
     self.discrete contains the same data in an alternative format
-    which facilitates analysis.
+    that facilitates analysis.
 
     Args
     ----
@@ -71,14 +72,8 @@ class EbbFlowDataset(Dataset):
         self.preprocessed = preprocessed
         self.split = split
         self.resampling_type = self.params.get('data_augmentation_type', None)
-        # set up data transforms
-        self.default_pre = [T.SmoothResponses(), T._Trim()]
-        self.supplied_pre = pre_transform
-        self.supplied_pre_params = pre_transform_params
-        if transform is not None:
-            self.transform = T.Compose(
-                [t(p) for t, p in zip(transform, transform_params)])
-
+        self._build_transforms(transform, transform_params,
+                               pre_transform, pre_transform_params)
         self.process()  # also saves processed data
         self.xu = torch.load(self.processed_paths[0])  # xu = model inputs
         with open(self.processed_paths[1], 'rb') as path:
@@ -86,6 +81,28 @@ class EbbFlowDataset(Dataset):
             self.discrete = other_data['discrete']
             self.game_ids = other_data['game_ids']
             self.resampling_info = other_data['resampling']
+
+    def _build_transforms(self, transform, transform_params,
+                          pre_transform, pre_transform_params):
+
+        # build pre transform - usually just outlier filtering
+        if pre_transform is not None:
+            pre = [t(p) for t, p in zip(pre_transform, pre_transform_params)]
+            self.pre_transform = T.Compose(pre)
+
+        # build transform
+        default_transform = [T.SmoothResponses(self.params)]
+        if transform is not None:
+            supplied_t = [t(p) for t, p in zip(transform, transform_params)]
+            tr = default_transform + supplied_t
+        else:
+            tr = default_transform
+        self.transform_list = tr
+
+    def update_smoothing(self, epoch):
+        # Update the kernel used to smoothing the response template
+        self.transform_list[0]._update_sm_kernel(epoch)
+        self.transform = T.Compose(self.transform_list)
 
     def get_processed_sample(self, idx):
         """Return an EbbFlowGameData instance with data from a single game.
@@ -165,15 +182,6 @@ class EbbFlowDataset(Dataset):
             self.resampling_info = resampling_info
         else:
             sm_params = copy.deepcopy(self.params)
-
-        # Build pre transform
-        self.default_pre[0]._build_sm_kernel(sm_params)
-        if self.supplied_pre is not None:
-            supplied_pre = [t(p) for t, p in zip(self.supplied_pre, 
-                                                 self.supplied_pre_params)]
-            self.pre_transform = T.Compose(self.default_pre + supplied_pre)
-        else:
-            self.pre_transform = T.Compose(self.default_pre)
 
         # Process each game
         data_list = self._get_preprocessed_games()
@@ -613,9 +621,8 @@ class EbbFlowGameData():
                                    + cls.extra_time_for_smooth)
                                   / params['step_size']))
         continuous = {key: np.zeros((num_samples, d))
-                      for key, d in zip(cls.continuous_fields[1:], 
-                                        cls.dims[1:])}
-        continuous['urespdir'] = np.zeros((num_samples, 4, 4))
+                      for key, d in zip(cls.continuous_fields,
+                                        cls.dims)}
         return discrete, continuous
 
     def standard_prep(self):
@@ -795,10 +802,8 @@ class EbbFlowGameData():
         for key in ['mv_dir', 'point_dir', 'task_cue']:
             self.continuous[key][trial_info['onset']:trial_info['offset'],
                                  trial_info[key]] = 1
-
         abs_rt = trial_info['onset'] + trial_info['urt_samples']
-        self.continuous['urespdir'][abs_rt, trial_info['urespdir'], 
-                                    trial_info['trial_type']] = 1
+        self.continuous['urespdir'][abs_rt, trial_info['urespdir']] = 1
 
     def get_extra_stats(self, output_rates=None, latents=None, 
                         pca_latents=None, **kwargs):
