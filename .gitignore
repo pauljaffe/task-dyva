@@ -22,6 +22,9 @@ neptune_config.yaml
 __pycache__/
 *.py[co]
 
+# Distribution / packaging
+*.egg-info/
+
 # Jupyter
 .ipynb_checkpoints/
 
