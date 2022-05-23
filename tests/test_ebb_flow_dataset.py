@@ -17,9 +17,8 @@ raw_data_fns = ['user1365.pickle',
                 'user2139.pickle']
 test_dirs = raw_data_dirs
 test_conditions = [
-    (None, 'kde', 0.1, 'center_of_mass', None, None),
-    (None, 'gaussian', 0, 'max', 'mad', 10),
-    ('kde', 'adaptive_gaussian', 0, 'max', 'mad', 10)
+    (None, 'gaussian', 0, 'center_of_mass', 'mad', 10),
+    ('kde', 'gaussian', 0.1, 'center_of_mass', 'mad', 10),
 ]
 
 
@@ -35,6 +34,7 @@ def test_ebb_flow_dataset(resamp, sm, noise_sd, rt_method, out_method,
                              'task_cue', 'urespdir', 'urt_samples']
     tparams = {'data_augmentation_type': resamp, 'smoothing_type': sm,
                'noise_sd': noise_sd, 'rt_method': rt_method,
+               'init_kernel_sd': 50,
                'start_times': [5000, 20000, 35000, 50000],
                'upscale_mult': 2, 'duration': 5000}
     train_p, val_p = copy.deepcopy(tparams), copy.deepcopy(tparams)
@@ -58,6 +58,7 @@ def test_ebb_flow_dataset(resamp, sm, noise_sd, rt_method, out_method,
         pre_datasets = tester.get_pre_datasets(expt)
 
         for dataset, pre, split in zip(split_datasets, pre_datasets, splits):
+            dataset.update_smoothing(0)
             params = dataset.params
 
             # Ensure all games are accounted for across processed + excluded
@@ -75,9 +76,9 @@ def test_ebb_flow_dataset(resamp, sm, noise_sd, rt_method, out_method,
 
             # Check shape of model inputs
             if split in ['train', 'val']:
-                assert dataset.xu.shape[0] == 250
+                assert dataset.xu.shape[0] == 375
             else:
-                assert dataset.xu.shape[0] == 500
+                assert dataset.xu.shape[0] == 625
             assert dataset.xu.shape[2] == 14
 
             # Check that discrete -> continuous mapping is correct
@@ -87,6 +88,7 @@ def test_ebb_flow_dataset(resamp, sm, noise_sd, rt_method, out_method,
                     gdisc = gdata.discrete
                     gdisc2disc = continuous_to_discrete(gdata)
                     for f in discrete_check_fields:
+                        print(f)
                         assert gdisc[f] == gdisc2disc[f]
 
             rates = dataset.xu[:, :, :4]

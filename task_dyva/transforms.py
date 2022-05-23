@@ -35,7 +35,7 @@ class SmoothResponses():
     """
     # This could all be done in Numpy to be a bit more readable... 
 
-    kernel_t_max = 3520
+    kernel_t_max = 3500
 
     def __init__(self, params):
         self.t = torch.arange(0, self.kernel_t_max, params['step_size'])
@@ -71,7 +71,8 @@ class SmoothResponses():
         orig_resp = torch.transpose(sm_data[:, :4], 0, 1).unsqueeze(0)
         sm_resp = torch.nn.functional.conv1d(orig_resp, self.kernel, groups=4,
                                              padding='same')
-        sm_data[:, :4] = torch.transpose(sm_resp.squeeze(), 0, 1)
+        # Correct one timestep offset
+        sm_data[1:, :4] = torch.transpose(sm_resp.squeeze(), 0, 1)[:-1, :]
         return sm_data[:self.n_steps, :]
 
 

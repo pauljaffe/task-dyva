@@ -54,10 +54,10 @@ This is a toy example and will only run for a few epochs. To train a model with 
 
 3) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
 
-4) To run the tests, run the following from the command line:
+4) To run all of the tests, including testing experiment logging, the Neptune logger needs to be configured. Run pytest with the --project_name argument set to the name of the Neptune project when running pytest:
 
 ```
-poetry run pytest
+poetry run pytest --project_name="my_project"
 ```
 
-Note that in order for the tests in test_experiment.py to work properly, the Neptune logger needs to be configured, and the NEPTUNE_PROJECT environment variable must be set.
+Only the tests in test_logging.py require the --project_name argument. 

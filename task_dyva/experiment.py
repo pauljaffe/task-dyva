@@ -8,7 +8,6 @@ import pickle
 import glob
 import re
 import copy
-import pdb
 
 import torch
 from torch.optim import Adadelta, Adam
@@ -279,8 +278,8 @@ class Experiment(nn.Module,
         if epoch is None:
             # Find epoch of most recent local checkpoint; if none exists,
             # create a new experiment.
-            checkpoint_fns = glob.glob(self.checkpoint_dir 
-                                       + 'checkpoint_epoch*.pth')
+            checkpoint_fns = glob.glob(
+                f'{self.checkpoint_dir}/checkpoint_epoch*.pth')
             if len(checkpoint_fns) == 0:
                 self._make_new_experiment()
                 return
