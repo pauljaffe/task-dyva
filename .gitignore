@@ -1,6 +1,7 @@
 # Ignore model training files, testing stuff
 training_runs/
 checkpoints/
+exploratory/
 *_inputs.pt
 *_data.pkl
 *split_inds.pkl
