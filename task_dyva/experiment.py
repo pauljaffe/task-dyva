@@ -104,6 +104,8 @@ class Experiment(nn.Module,
             else pre_transform_params
         self.transform_params = [] if transform_params is None \
             else transform_params
+        self.mixed_precision = self.config_params['training_params'].get(
+            'mixed_precision', False)
 
         # enforce reproducibility
         rand_seed = self.config_params['training_params']['rand_seed']
@@ -124,6 +126,8 @@ class Experiment(nn.Module,
         self._prep_data()
         self._build_model()
         self._build_optimizer()
+        if self.mixed_precision and self.device != 'cpu':
+            self._build_scaler()
         if self.do_early_stopping:
             self._setup_early_stopping()
 
@@ -144,12 +148,12 @@ class Experiment(nn.Module,
 
             self.eval()
             with torch.no_grad():
-                train_to_log = {'loss': train_loss, 'NLL': train_NLL}
+                train_to_log = {'loss': train_loss.item(), 'NLL': train_NLL.item()}
                 self._log_metrics(train_to_log, 'train', epoch)
 
                 if epoch % self.keep_every == 0:
                     val_NLL, val_loss = self._batch_train(val_loader, 'val')
-                    val_to_log = {'loss': val_loss, 'NLL': val_NLL}
+                    val_to_log = {'loss': val_loss.item(), 'NLL': val_NLL.item()}
                     self._log_metrics(val_to_log, 'val', epoch)
                     self._save_checkpoint(epoch)
                     val_metrics = self.get_behavior_metrics(self.val_dataset)
@@ -178,8 +182,8 @@ class Experiment(nn.Module,
         return loader
 
     def _batch_train(self, loader, mode):
-        NLL_tot = 0
-        loss_tot = 0
+        NLL_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
+        loss_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
         for batch in loader:
             loaded_batch = batch.batch.to(self.device)
             n_time = loaded_batch.shape[0]
@@ -191,25 +195,44 @@ class Experiment(nn.Module,
                 if self.iteration % self.update_every == 0:
                     self._update_anneal_param()
 
-                this_NLL, this_loss = self.objective(self.model, loaded_batch,
-                                                     self.anneal_param)
-                this_loss.backward()
+                if self.mixed_precision and self.device != 'cpu':
+                    with torch.cuda.amp.autocast():
+                        this_NLL, this_loss = self.objective(self.model, loaded_batch,
+                                                             self.anneal_param)
+                    self.scaler.scale(this_loss).backward()
+                    self.scaler.unscale_(self.optimizer)
+                    if self.clip_grads:
+                        torch.nn.utils.clip_grad_norm_(self.parameters(), 
+                                                       self.clip_val)
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                else:
+                    this_NLL, this_loss = self.objective(self.model, loaded_batch,
+                                                         self.anneal_param)
+                    this_loss.backward()
 
-                if self.clip_grads:
-                    torch.nn.utils.clip_grad_norm_(self.parameters(), 
-                                                   self.clip_val)
-                self.optimizer.step()
+                    if self.clip_grads:
+                        torch.nn.utils.clip_grad_norm_(self.parameters(), 
+                                                       self.clip_val)
+                    self.optimizer.step()
+
                 self.iteration += 1
 
             elif mode == 'val':
-                this_NLL, this_loss = self.objective(
-                    self.model, loaded_batch, self._max_anneal)
+                if self.mixed_precision and self.device != 'cpu': 
+                    with torch.cuda.amp.autocast():
+                        this_NLL, this_loss = self.objective(
+                            self.model, loaded_batch, self._max_anneal)
+                else:
+                    this_NLL, this_loss = self.objective(
+                        self.model, loaded_batch, self._max_anneal)
 
-            loss_tot += this_loss.item() / n_time
-            NLL_tot += this_NLL.item() / n_time
+            loss_tot += this_loss / n_time
+            NLL_tot += this_NLL / n_time
 
         loss_avg = loss_tot / len(loader)
         NLL_avg = NLL_tot / len(loader)
+
         return NLL_avg, loss_avg
 
     def _load_config(self, config, **kwargs):
@@ -337,13 +360,24 @@ class Experiment(nn.Module,
             save_counter = None
             save_score = None
 
-        torch.save({'model_state': self.state_dict(),
-                    'optimizer_state': self.optimizer.state_dict(),
-                    'epoch': epoch,
-                    'iteration': self.iteration,
-                    'stop_counter': save_counter,
-                    'stop_best_score': save_score},
-                   save_path)
+        if self.mixed_precision and self.device != 'cpu':
+            torch.save({'model_state': self.state_dict(),
+                        'optimizer_state': self.optimizer.state_dict(),
+                        'scaler': self.scaler.state_dict(),
+                        'epoch': epoch,
+                        'iteration': self.iteration,
+                        'stop_counter': save_counter,
+                        'stop_best_score': save_score},
+                       save_path)
+
+        else:
+            torch.save({'model_state': self.state_dict(),
+                        'optimizer_state': self.optimizer.state_dict(),
+                        'epoch': epoch,
+                        'iteration': self.iteration,
+                        'stop_counter': save_counter,
+                        'stop_best_score': save_score},
+                       save_path)
         if self.do_logging:
             # Also save checkpoint to Neptune
             self.logger['checkpoint_epoch'].log(epoch)
@@ -443,6 +477,11 @@ class Experiment(nn.Module,
                                   amsgrad=do_amsgrad)
         if self.checkpoint is not None:
             self.optimizer.load_state_dict(self.checkpoint['optimizer_state'])
+
+    def _build_scaler(self):
+        self.scaler = torch.cuda.amp.GradScaler()
+        if self.checkpoint is not None:
+            self.scaler.load_state_dict(self.checkpoint['scaler'])
 
     def _setup_early_stopping(self):
         patience = self.config_params['training_params'].get(

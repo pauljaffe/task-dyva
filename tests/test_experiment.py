@@ -16,14 +16,17 @@ test_dir = raw_data_dir
 
 
 @pytest.mark.parametrize('do_stop, delete_local, \
+                          mixed_precision, \
                           orig_training_epochs, \
                           resume_training_epochs, orig_true_epochs, \
                           resume_true_epochs, patience', [
-    (True, False, 5, 5, 3, 4, 2),
-    (False, False, 3, 6, 3, 6, 0),
-    (False, True, 3, 6, 3, 6, 0)
+    (True, False, False, 5, 5, 3, 4, 2),
+    (False, False, False, 3, 6, 3, 6, 0),
+    (False, True, False, 3, 6, 3, 6, 0),
+    (True, False, True, 5, 5, 3, 4, 2),
 ])
-def test_experiment(do_stop, delete_local, orig_training_epochs,
+def test_experiment(do_stop, delete_local, 
+                    mixed_precision, orig_training_epochs,
                     resume_training_epochs, orig_true_epochs,
                     resume_true_epochs, patience, raw_data_dir=raw_data_dir,
                     raw_data_fn=raw_data_fn, test_dir=test_dir):
@@ -38,7 +41,7 @@ def test_experiment(do_stop, delete_local, orig_training_epochs,
                    'num_epochs': orig_training_epochs, 'keep_every': 1,
                    'stop_patience': patience, 'stop_min_epoch': 0,
                    'stop_delta': float('inf'), 'stop_metric': 'switch_con_avg',
-                   'batch_size': 512}
+                   'batch_size': 512, 'mixed_precision': mixed_precision}
 
     tester = SetUpTests(test_dir, raw_data_dir, raw_data_fn, **expt_kwargs)
     tester.tear_down(test_dir)

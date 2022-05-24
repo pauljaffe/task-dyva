@@ -48,7 +48,8 @@ class ConfigMixin:
                         'clip_grads', 'clip_val', 'n_workers', 'rand_seed', 
                         'learn_prior', 'objective', 'do_amsgrad', 'start_temp',
                         'cool_rate', 'temp_update_every', 'stop_patience', 
-                        'stop_min_epoch', 'stop_delta', 'stop_metric'}
+                        'stop_min_epoch', 'stop_delta', 'stop_metric',
+                        'mixed_precision'}
 
     _data_params = {'input_dim', 'u_dim', 'nth_play_range', 'outlier_method', 
                     'outlier_thresh', 'keep_every'}
