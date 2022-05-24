@@ -2,6 +2,7 @@
 __call__ method. These can be supplied as inputs to the TaskDataset class.
 """
 import math
+import pdb
 
 import numpy as np
 import torch
@@ -27,47 +28,34 @@ class SmoothResponses():
     by setting the 'smoothing_type' key in params to one of the following 
     options:
 
-    'gaussian': Responses are smoothed with a Gaussian kernel with 
-        SD (width) set by the key 'kernel_sd' in params.
-    'adaptive_gaussian': As above, but the SD (width) of the kernel depends
-        on the type of trial. Each trial is assigned to one of the following
-        four trial types: congruent/stay, congruent/switch, 
-        incongruent/stay, and incongruent/switch. The kernel SD for a given
-        trial is set to the SD of the RT distribution for the corresponding 
-        trial type. 
-    'kde': As above, but instead of smoothing with a Gaussian, the smoothing
-        kernels are kernel density estimates of the RT distributions for
-        each of the four trial types. 
+    'gaussian': Responses are smoothed with a Gaussian kernel.
+        Currently this is the only available option. The width of the 
+        smoothing kernel is reduced over the course of training from 
+        'init_kernel_sd' to 'final_kernel_sd' over 'kernel_delta_epochs' epochs. 
     """
+    # This could all be done in Numpy to be a bit more readable... 
 
-    kernel_t_max = 3520
+    kernel_t_max = 3500
 
-    def _build_sm_kernel(self, params):
-        t = np.arange(0, self.kernel_t_max, params['step_size'])
-        if params['smoothing_type'] == 'gaussian':
-            sd = params['kernel_sd']
-            m = self.kernel_t_max / 2
-            single_kernel = np.exp(-0.5 * ((t - m) / sd) ** 2)
-            kernel = [single_kernel / np.amax(single_kernel) 
-                      for i in range(4)]
-        elif params['smoothing_type'] == 'adaptive_gaussian':
-            std_devs = params['params']
-            m = self.kernel_t_max / 2
-            kernels_unnorm = [np.exp(-0.5 * ((t - m) / std_devs[k]) ** 2)
-                              for k in range(4)]
-            kernel = [k / np.amax(k) for k in kernels_unnorm]
-        elif params['smoothing_type'] == 'kde':
-            dists = params['params']
-            pdfs = [dists[k].pdf(t) for k in range(4)]
-            pdfs_norm = [p / sum(p) for p in pdfs]
-            means = [np.dot(pn, t) for pn in pdfs_norm]
-            shifts = [self.kernel_t_max / 2 - m for m in means]
-            kernel = [dists[k].pdf(t - s) / np.amax(dists[k].pdf(t - s))
-                      for k, s in zip(range(4), shifts)]
-        self.kernel = kernel
+    def __init__(self, params):
+        self.t = torch.arange(0, self.kernel_t_max, params['step_size'])
+        self.init_sd = params['init_kernel_sd']
+        self.final_sd = torch.Tensor([params['final_kernel_sd']])
+        self.tau = params['kernel_delta_epochs']
+        self.m = self.kernel_t_max / 2
+        self.n_steps = int(np.rint(params['duration'] 
+                                   / params['step_size']))
+
+    def _update_sm_kernel(self, epoch):
+        kernel_range = self.init_sd - self.final_sd
+        sd_pre = torch.Tensor([self.init_sd - kernel_range * epoch / self.tau])
+        sd = torch.max(sd_pre, self.final_sd)
+        self.kernel = torch.exp(
+            -0.5 * ((self.t - self.m) / sd) ** 2).unsqueeze(0).repeat(4, 1, 1)
 
     def __call__(self, data):
-        """Smooth the responses of a single game.
+        """Smooth the responses of a single game. Also trim down
+        to be the proper length.
 
         Args
         ----
@@ -79,15 +67,13 @@ class SmoothResponses():
             transformation is applied. 
         """
 
-        responses = data.continuous['urespdir']
-        sm_responses = np.zeros(responses.shape[:2])
-        for direction in range(responses.shape[1]):
-            for trial_type in range(responses.shape[2]):
-                conv_full = np.convolve(responses[:, direction, trial_type], 
-                                        self.kernel[trial_type], mode='same')
-                sm_responses[:-1, direction] += conv_full[1:]
-        data.continuous['urespdir'] = sm_responses
-        return data
+        sm_data = torch.clone(data)
+        orig_resp = torch.transpose(sm_data[:, :4], 0, 1).unsqueeze(0)
+        sm_resp = torch.nn.functional.conv1d(orig_resp, self.kernel, groups=4,
+                                             padding='same')
+        # Correct one timestep offset
+        sm_data[1:, :4] = torch.transpose(sm_resp.squeeze(), 0, 1)[:-1, :]
+        return sm_data[:self.n_steps, :]
 
 
 class FilterOutliers():

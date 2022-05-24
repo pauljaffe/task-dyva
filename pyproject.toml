@@ -2,6 +2,7 @@
 name = "task-dyva"
 version = "0.1.0"
 description = "task-DyVA"
+license = "MIT"
 authors = ["Paul Jaffe <pauljaffe7@gmail.com>"]
 readme = "README.md"
 homepage = "https://github.com/pauljaffe/task-dyva"
@@ -10,13 +11,14 @@ repository = "https://github.com/pauljaffe/task-dyva"
 [tool.poetry.dependencies]
 python = "^3.7"
 numpy = "1.20.2"
-torch = "1.8.1"
+torch = "^1.11.0"
 scipy = "1.6.1"
 seaborn = "~0.11"
 PyYAML = "^5.4.1"
 sklearn = "^0.0"
-neptune-client = "^0.10.4"
+neptune-client = "^0.14.3"
 dill = "^0.3.4"
+pytest = "^7.1.0"
 
 [tool.poetry.dev-dependencies]
 

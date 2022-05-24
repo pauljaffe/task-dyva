@@ -31,9 +31,8 @@ class Experiment(nn.Module,
     By default, model training metrics will be logged using Neptune
     (recommended; see https://neptune.ai/), but this can be disabled 
     by setting 'do_logging' in kwargs to False. If logging is enabled,
-    the project_name field in config/neptune_config.yaml should be set
-    to the name of the Neptune project, and an API token should be 
-    established for authentication.
+    neptune_proj_name should be supplied as an argument,
+    and an API token should be established for authentication.
 
     See https://docs.neptune.ai/getting-started/installation 
     for detailed instructions. 
@@ -76,6 +75,8 @@ class Experiment(nn.Module,
         model training. If None (default) and training is being resumed, the 
         most recently saved checkpoint epoch will be used. This arg
         is ignored for new training runs. 
+    neptune_proj_name (str, optional): Name of the project as defined by
+        the Neptune logger. 
     **kwargs (optional): Additional key: value mappings which can be passed
         to override the parameters defined in the config file. 
         See ConfigMixin.
@@ -85,10 +86,11 @@ class Experiment(nn.Module,
                  expt_tags=None, config=None, device='cuda:0', 
                  processed_dir=None, pre_transform=None, transform=None, 
                  pre_transform_params=None, transform_params=None, 
-                 load_epoch=None, **kwargs):
+                 load_epoch=None, neptune_proj_name=None, **kwargs):
         super(Experiment, self).__init__()
         self.base_dir = base_dir
         self.expt_name = expt_name
+        self.neptune_proj_name = neptune_proj_name
         self.expt_tags = [] if expt_tags is None else expt_tags
         self.device = device
         self.checkpoint_dir = os.path.join(base_dir, 'checkpoints')
@@ -102,6 +104,8 @@ class Experiment(nn.Module,
             else pre_transform_params
         self.transform_params = [] if transform_params is None \
             else transform_params
+        self.mixed_precision = self.config_params['training_params'].get(
+            'mixed_precision', False)
 
         # enforce reproducibility
         rand_seed = self.config_params['training_params']['rand_seed']
@@ -127,6 +131,8 @@ class Experiment(nn.Module,
         self._prep_data()
         self._build_model()
         self._build_optimizer()
+        if self.mixed_precision and self.device != 'cpu':
+            self._build_scaler()
         if self.do_early_stopping:
             self._setup_early_stopping()
 
@@ -139,21 +145,23 @@ class Experiment(nn.Module,
         train_loader = self._get_data_loader(self.train_dataset)
         val_loader = self._get_data_loader(self.val_dataset)
         for epoch in range(self.start_epoch, self.num_epochs):
+            train_loader.dataset.update_smoothing(epoch)
+            val_loader.dataset.update_smoothing(epoch)
+
             self.train()
             train_NLL, train_loss = self._batch_train(train_loader, 'train')
 
             self.eval()
             with torch.no_grad():
-                train_to_log = {'loss': train_loss, 'NLL': train_NLL}
+                train_to_log = {'loss': train_loss.item(), 'NLL': train_NLL.item()}
                 self._log_metrics(train_to_log, 'train', epoch)
 
                 if epoch % self.keep_every == 0:
                     val_NLL, val_loss = self._batch_train(val_loader, 'val')
-                    val_to_log = {'loss': val_loss, 'NLL': val_NLL}
+                    val_to_log = {'loss': val_loss.item(), 'NLL': val_NLL.item()}
                     self._log_metrics(val_to_log, 'val', epoch)
                     self._save_checkpoint(epoch)
-                    val_metrics = self.get_behavior_metrics(self.val_dataset, 
-                                                            epoch, 'val')
+                    val_metrics = self.get_behavior_metrics(self.val_dataset)
                     self._log_metrics(val_metrics.summary_stats, 'val', 
                                       epoch, epoch_end=True)
 
@@ -179,8 +187,8 @@ class Experiment(nn.Module,
         return loader
 
     def _batch_train(self, loader, mode):
-        NLL_tot = 0
-        loss_tot = 0
+        NLL_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
+        loss_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
         for batch in loader:
             loaded_batch = batch.batch.to(self.device)
             n_time = loaded_batch.shape[0]
@@ -191,25 +199,45 @@ class Experiment(nn.Module,
 
                 if self.iteration % self.update_every == 0:
                     self._update_anneal_param()
-                this_NLL, this_loss = self.objective(self.model, loaded_batch,
-                                                     self.anneal_param)
-                this_loss.backward()
 
-                if self.clip_grads:
-                    torch.nn.utils.clip_grad_norm_(self.parameters(), 
-                                                   self.clip_val)
-                self.optimizer.step()
+                if self.mixed_precision and self.device != 'cpu':
+                    with torch.cuda.amp.autocast():
+                        this_NLL, this_loss = self.objective(self.model, loaded_batch,
+                                                             self.anneal_param)
+                    self.scaler.scale(this_loss).backward()
+                    self.scaler.unscale_(self.optimizer)
+                    if self.clip_grads:
+                        torch.nn.utils.clip_grad_norm_(self.parameters(), 
+                                                       self.clip_val)
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                else:
+                    this_NLL, this_loss = self.objective(self.model, loaded_batch,
+                                                         self.anneal_param)
+                    this_loss.backward()
+
+                    if self.clip_grads:
+                        torch.nn.utils.clip_grad_norm_(self.parameters(), 
+                                                       self.clip_val)
+                    self.optimizer.step()
+
                 self.iteration += 1
 
             elif mode == 'val':
-                this_NLL, this_loss = self.objective(
-                    self.model, loaded_batch, self._max_anneal)
+                if self.mixed_precision and self.device != 'cpu': 
+                    with torch.cuda.amp.autocast():
+                        this_NLL, this_loss = self.objective(
+                            self.model, loaded_batch, self._max_anneal)
+                else:
+                    this_NLL, this_loss = self.objective(
+                        self.model, loaded_batch, self._max_anneal)
 
-            loss_tot += this_loss.item() / n_time
-            NLL_tot += this_NLL.item() / n_time
+            loss_tot += this_loss / n_time
+            NLL_tot += this_NLL / n_time
 
         loss_avg = loss_tot / len(loader)
         NLL_avg = NLL_tot / len(loader)
+
         return NLL_avg, loss_avg
 
     def _load_config(self, config, **kwargs):
@@ -234,23 +262,29 @@ class Experiment(nn.Module,
             except FileNotFoundError:
                 self._make_new_experiment()
         else:
-            # If load_epoch is None, the most recent local checkpoint is
-            # loaded. If no checkpoints are found, a new experiment is
-            # created. 
-            self._load_local_checkpoint(epoch=load_epoch)
+            if self.params_to_load is None:
+                # Loads parameters from a checkpoint designated by epoch number.
+                # If load_epoch is None, the most recent local checkpoint is
+                # loaded. If no checkpoints are found, a new experiment is
+                # created. 
+                self._load_local_checkpoint(epoch=load_epoch)
+            else:
+                # Loads parameters from a named checkpoint file. 
+                self._load_params_file()
+            try:
+                self.iteration = self.checkpoint['iteration']
+                self.start_epoch = self.checkpoint['epoch'] + 1
+            except:
+                self.iteration = 0
+                self.start_epoch = 0
 
     def _reload_logger(self):
-        project_name = self._get_neptune_info()
+        project_name = self.neptune_proj_name
         with open(os.path.join(
                 self.base_dir, 'logger_info.pickle'), 'rb') as handle:
             logger_info = pickle.load(handle)
         expt_id = logger_info['id']
         self.logger = neptune.init(project=project_name, run=expt_id)
-
-    def _get_neptune_info(self):
-        neptune_config = yaml.safe_load(
-            pkgutil.get_data('task_dyva', 'config/neptune_config.yaml'))
-        return neptune_config['project_name']
 
     def _make_new_experiment(self):
         os.makedirs(self.checkpoint_dir, exist_ok=True)
@@ -258,7 +292,7 @@ class Experiment(nn.Module,
         self.iteration = 0
         self.checkpoint = None
         if self.do_logging:
-            project_name = self._get_neptune_info()
+            project_name = self.neptune_proj_name
             self.logger = neptune.init(project=project_name, 
                                        name=self.expt_name)
             self.logger['parameters'] = self.config_params
@@ -270,10 +304,10 @@ class Experiment(nn.Module,
 
     def _load_local_checkpoint(self, epoch=None):
         if epoch is None:
-            # Find epoch of most recent local checkpoint; if none exist,
+            # Find epoch of most recent local checkpoint; if none exists,
             # create a new experiment.
-            checkpoint_fns = glob.glob(self.checkpoint_dir 
-                                       + 'checkpoint_epoch*.pth')
+            checkpoint_fns = glob.glob(
+                f'{self.checkpoint_dir}/checkpoint_epoch*.pth')
             if len(checkpoint_fns) == 0:
                 self._make_new_experiment()
                 return
@@ -286,8 +320,11 @@ class Experiment(nn.Module,
                                            f'checkpoint_epoch{epoch}.pth')
             self.checkpoint = torch.load(checkpoint_path, 
                                          map_location=self.device)
-        self.iteration = self.checkpoint['iteration']
-        self.start_epoch = self.checkpoint['epoch'] + 1
+
+    def _load_params_file(self):
+        checkpoint_path = os.path.join(self.base_dir, self.params_to_load)
+        self.checkpoint = torch.load(checkpoint_path, 
+                                     map_location=self.device)
 
     def _load_logged_checkpoint(self, epoch=None):
         if epoch is None:
@@ -328,13 +365,24 @@ class Experiment(nn.Module,
             save_counter = None
             save_score = None
 
-        torch.save({'model_state': self.state_dict(),
-                    'optimizer_state': self.optimizer.state_dict(),
-                    'epoch': epoch,
-                    'iteration': self.iteration,
-                    'stop_counter': save_counter,
-                    'stop_best_score': save_score},
-                   save_path)
+        if self.mixed_precision and self.device != 'cpu':
+            torch.save({'model_state': self.state_dict(),
+                        'optimizer_state': self.optimizer.state_dict(),
+                        'scaler': self.scaler.state_dict(),
+                        'epoch': epoch,
+                        'iteration': self.iteration,
+                        'stop_counter': save_counter,
+                        'stop_best_score': save_score},
+                       save_path)
+
+        else:
+            torch.save({'model_state': self.state_dict(),
+                        'optimizer_state': self.optimizer.state_dict(),
+                        'epoch': epoch,
+                        'iteration': self.iteration,
+                        'stop_counter': save_counter,
+                        'stop_best_score': save_score},
+                       save_path)
         if self.do_logging:
             # Also save checkpoint to Neptune
             self.logger['checkpoint_epoch'].log(epoch)
@@ -359,6 +407,10 @@ class Experiment(nn.Module,
             datasets_to_prep = [pre_datasets[2]]
             splits_to_prep = [splits[2]]
             splits_to_set = [splits[2]]
+        elif self.mode == 'val_only':
+            datasets_to_prep = [pre_datasets[1]]
+            splits_to_prep = [splits[1]]
+            splits_to_set = [splits[1]]
         elif self.mode == 'full':
             datasets_to_prep = pre_datasets
             splits_to_prep = splits
@@ -431,6 +483,11 @@ class Experiment(nn.Module,
         if self.checkpoint is not None:
             self.optimizer.load_state_dict(self.checkpoint['optimizer_state'])
 
+    def _build_scaler(self):
+        self.scaler = torch.cuda.amp.GradScaler()
+        if self.checkpoint is not None:
+            self.scaler.load_state_dict(self.checkpoint['scaler'])
+
     def _setup_early_stopping(self):
         patience = self.config_params['training_params'].get(
             'stop_patience', 20)
@@ -447,6 +504,13 @@ class Experiment(nn.Module,
                 'stop_best_score', 0)
             self.early_stopping.counter = self.checkpoint.get(
                 'stop_counter', 0)
+
+    def _get_samples_for_plot(self, dataset, inds):
+        plot_data = copy.deepcopy(dataset)
+        plot_xu = copy.deepcopy(dataset.xu)[:, inds, :]
+        plot_data.xu = plot_xu
+        plot_loader = self._get_data_loader(plot_data, shuffle=False)
+        return next(iter(plot_loader)).batch.to(self.device)
 
     def plot_generated_sample(self, epoch, dataset, do_plot=False, 
                               sample_ind=None, stim_ylims=None,
@@ -482,9 +546,13 @@ class Experiment(nn.Module,
             gen_inds = [sample_ind, 0]
 
         # Generate model outputs from dataset
-        xu_sample = dataset.xu[:, gen_inds, :].to(self.device)
-        gen_outputs = self.model.forward(xu_sample, generate_mode=True, 
-                                         clamp=False)
+#        xu_sample = dataset[gen_inds].to(self.device)
+        plot_batch = self._get_samples_for_plot(dataset, gen_inds)
+#        xu_sample = dataset.xu[:, gen_inds, :].to(self.device)
+        gen_outputs = self.model(plot_batch, generate_mode=True,
+                                 clamp=False)
+#        gen_outputs = self.model.forward(xu_sample, generate_mode=True, 
+#                                         clamp=False)
         rate_out = gen_outputs[1].mean
         rate_np = rate_out.cpu().detach()[:, 0, :].squeeze().numpy()
         trial = dataset.get_processed_sample(gen_inds[0])
@@ -513,24 +581,27 @@ class Experiment(nn.Module,
                                     device=self.device, requires_grad=False)
         self.anneal_param = torch.min(anneal_param, self._max_anneal)
 
-    def get_behavior_metrics(self, dataset, epoch, label, save_local=False, 
-                             load_local=True, analyze_latents=False,
+    def get_behavior_metrics(self, dataset, save_fn=None, save_local=False, 
+                             load_local=False, analyze_latents=False,
+                             get_model_outputs=True, stats_dir=None,
                              **kwargs):
         """Get behavioral stats for user and model from the supplied dataset.
 
         Args
         ----
         dataset (EbbFlowDataset instance): Dataset used to calculate stats.
-        epoch (int): Epoch number saved into the file name, otherwise
-            has no function.
-        label (str): A label to save into the file name, otherwise
-            has no function. 
+        save_fn (str): File name where behavior metrics are saved (should be
+            a .pkl file).
         save_local (Boolean, optional): Whether or not to save a local copy
             of the resulting stats object.
         load_local (Boolean, optional): Whether or not to reload a saved
             stats object. 
         analyze_latents (Boolean, optional): Whether or not to analyze
             the latent state variables. 
+        get_model_outputs (Boolean, optional): Whether or not to generate
+            model outputs.
+        stats_dir (str): Name of the directory within self.base_dir to
+            save model stats.
         **kwargs (optional): Additional key, value pairs to pass to
             EbbFlowStats.
 
@@ -540,39 +611,47 @@ class Experiment(nn.Module,
             supplied dataset. 
         """
 
-        stats_path = os.path.join(self.base_dir, 'model_stats', 
-                                  f'{label}_epoch{epoch}.pkl')
+        if stats_dir is None:
+            stats_dir = 'model_analysis'
         if load_local:
+            stats_path = os.path.join(self.base_dir, stats_dir, save_fn)
             if os.path.exists(stats_path):
                 with open(stats_path, 'rb') as path:
                     stats = pickle.load(path)
                 return stats
 
-        loader = self._get_data_loader(dataset, shuffle=False)
-        rates = []
         if analyze_latents:
             latents = []
         else:
             latents = None
-        for batch_ind, batch in enumerate(loader):
-            loaded_batch = batch.batch.to(self.device)
-            outputs = self.model.forward(loaded_batch,
-                                         generate_mode=True, clamp=False)
-            rates.append(outputs[1].mean)
-            if analyze_latents:
-                latents.append(outputs[3])
 
-        rates = torch.cat(rates, 1)
-        if analyze_latents:
-            latents = torch.cat(latents, 1)
+        if get_model_outputs:
+            loader = self._get_data_loader(dataset, shuffle=False)
+            rates = []
+            for batch_ind, batch in enumerate(loader):
+                loaded_batch = batch.batch.to(self.device)
+                outputs = self.model.forward(loaded_batch,
+                                             generate_mode=True, clamp=False)
+                rates.append(outputs[1].mean)
+                if analyze_latents:
+                    latents.append(outputs[3])
+
+            rates = torch.cat(rates, 1)
+            if analyze_latents:
+                latents = torch.cat(latents, 1)
+        else:
+            rates = None
+
         stats_obj = EbbFlowStats(rates, dataset, latents=latents, **kwargs)
         stats = stats_obj.get_stats()
 
         if save_local:
-            os.makedirs(os.path.join(self.base_dir, 'model_stats'), 
+            stats_path = os.path.join(self.base_dir, stats_dir, save_fn)
+            os.makedirs(os.path.join(self.base_dir, stats_dir), 
                         exist_ok=True)
             with open(stats_path, 'wb') as path:
                 pickle.dump(stats_obj, path, protocol=4)
+
         return stats_obj
 
     def _split_train_val_test(self, data):

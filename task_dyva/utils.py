@@ -1,6 +1,10 @@
+import os
+import itertools
+
 import torch
 import numpy as np
-from scipy.stats import special_ortho_group
+import pandas as pd
+from scipy.stats import special_ortho_group, pearsonr
 from sklearn.decomposition import PCA
 
 
@@ -44,7 +48,8 @@ class ConfigMixin:
                         'clip_grads', 'clip_val', 'n_workers', 'rand_seed', 
                         'learn_prior', 'objective', 'do_amsgrad', 'start_temp',
                         'cool_rate', 'temp_update_every', 'stop_patience', 
-                        'stop_min_epoch', 'stop_delta', 'stop_metric'}
+                        'stop_min_epoch', 'stop_delta', 'stop_metric',
+                        'mixed_precision'}
 
     _data_params = {'input_dim', 'u_dim', 'nth_play_range', 'outlier_method', 
                     'outlier_thresh', 'keep_every', 'data_rand_seed'}
@@ -56,10 +61,11 @@ class ConfigMixin:
                          'data_augmentation_type', 'data_aug_kernel_bandwidth',
                          'aug_rt_sd', 'aug_resample_frac', 'upscale_mult', 
                          'min_trials', 'post_resp_buffer', 'smoothing_type',
-                         'kernel_sd', 'match_accuracy', 'rt_method'}
+                         'kernel_sd', 'match_accuracy', 'rt_method',
+                         'init_kernel_sd', 'final_kernel_sd', 'kernel_delta_epochs'}
 
     _experiment_params = {'split_indices', 'processed_save_dir', 'mode',
-                          'do_logging', 'do_early_stopping'}
+                          'do_logging', 'do_early_stopping', 'params_to_load'}
 
     def update_params(self, **kwargs):
         # Update params from the config file
@@ -94,6 +100,7 @@ class ConfigMixin:
         self.mode = kwargs.get('mode', 'training')
         self.do_logging = kwargs.get('do_logging', True)
         self.do_early_stopping = kwargs.get('do_early_stopping', True)
+        self.params_to_load = kwargs.get('params_to_load', None)
 
 
 def median_absolute_dev(data, median=None):
@@ -164,4 +171,77 @@ def z_pca(z, n_keep, whiten=False):
     z_reduced = np.reshape(
             z_transformed, (T, N, z_dim), order='F')[:, :, :n_keep]
 
-    return z_reduced, z_var_exp
+    return z_reduced, z_var_exp, z_pca_obj
+
+
+def save_figure(fig, save_dir, fn, save_svg=True, save_png=True):
+    if save_svg:
+        svg_path = os.path.join(save_dir, f'{fn}.svg')
+        fig.savefig(svg_path, transparent=True, bbox_inches='tight')
+    if save_png:
+        png_path = os.path.join(save_dir, f'{fn}.png')
+        fig.savefig(png_path, bbox_inches='tight')
+
+
+def plot_scatter(group_stats, params, ax, line_ext):
+    # Model vs. user scatter plotting utility
+    metric = params['metric']
+    u_key = f'u_{metric}'
+    m_key = f'm_{metric}'
+    u_vals = np.array(group_stats[u_key])
+    m_vals = np.array(group_stats[m_key])    
+    
+    # Plot best fit line
+    plot_x = np.array([min(u_vals) - line_ext, 
+                       max(u_vals) + line_ext])
+    m, b = np.polyfit(u_vals, m_vals, 1)
+    ax.plot(plot_x, m * plot_x + b, 'r--', zorder=1, linewidth=0.5)
+
+    # Plot unity line
+    ax.plot(plot_x, plot_x, 'k-', zorder=1, linewidth=0.5)
+    
+    # Plot all individuals
+    ax.scatter(u_vals, m_vals, s=0.2, marker='o', zorder=2, alpha=0.8)
+    ax.set_xlabel(f"Participant {params['label']}")
+    ax.set_ylabel(f"Model {params['label']}")
+    ax.set_xlim(params['ax_lims'])
+    ax.set_ylim(params['ax_lims'])
+
+    # Stats
+    r = pearsonr(u_vals, m_vals)
+    u_mean = np.mean(u_vals)
+    m_mean = np.mean(m_vals)
+    u_sem = np.std(u_vals) / np.sqrt(len(u_vals))
+    m_sem = np.std(m_vals) / np.sqrt(len(m_vals))
+    print(f'{metric} corr. coeff.: {r[0]}, p = {r[1]}')
+    print(f'{metric} slope: {m}; intercept: {b}') 
+    print(f'Participant {metric} mean +/- s.e.m.: {u_mean} +/- {u_sem}')
+    print(f'Model {metric} mean +/- s.e.m.: {m_mean} +/- {m_sem}')
+    print('--------------------------------------------------------')
+
+
+def expt_stats_to_df(metrics, expts, age_bins, stats):
+    df = pd.DataFrame(
+        columns=['user', 'age_bin', 'metric', 'value', 'model_or_user'])
+    for expt, ab, stats in zip(expts, age_bins, stats):
+        for key in metrics:
+            u_key = 'u_{0}'.format(key)
+            m_key = 'm_{0}'.format(key)
+            u_val = stats.summary_stats[u_key]
+            m_val = stats.summary_stats[m_key]
+            new_u_row = {'user': expt, 'age_bin': ab, 'metric': key, 
+                         'value': u_val, 'model_or_user': 'Participants'}
+            new_m_row = {'user': expt, 'age_bin': ab, 'metric': key, 
+                         'value': m_val, 'model_or_user': 'Models'}
+            df = df.append(new_u_row, ignore_index=True)
+            df = df.append(new_m_row, ignore_index=True) 
+    return df
+
+
+def get_stimulus_combos():
+    # Returns tuples of all possible stimulus combinations for 
+    # a single trial (move, point, task cue)
+    combos = list(itertools.product([0, 1, 2, 3],
+                                    [0, 1, 2, 3],
+                                    [0, 1]))
+    return combos

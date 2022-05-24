@@ -38,6 +38,7 @@ def test_resampling(raw_data_dir=raw_data_dir, raw_data_fn=raw_data_fn,
 
         expt = tester.make_experiment()
         data = expt.train_dataset
+        data.update_smoothing(0)
         rates = data.xu[:, :, :4]
         stats_obj = EbbFlowStats(rates, data)
         stats = stats_obj.get_stats()
