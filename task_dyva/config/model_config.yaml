@@ -10,9 +10,11 @@ model_params:
   encoder_rnn_n_layers: 1
   encoder_combo_hidden_dim: 64
   decoder_hidden_dim: 64
+  decoder_type: 'single_hidden'
   dynamics_matrix_mult: 0.99
   dynamics_init_method: 'custom_rotation'
   trans_dim: 2
+  alphas_type: 'coupled'
   prior_dist: 'Normal'
   posterior_dist: 'Normal'
   likelihood_dist: 'Normal'

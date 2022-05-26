@@ -90,13 +90,18 @@ class _Decoder(nn.Module):
     # Maps the latent state variable z to the parameters of the
     # observation model, from which x (the responses) are sampled. 
     def __init__(self, latent_dim, decoder_hidden_dim, 
-                 scale_param, input_dim=4):
+                 scale_param, decoder_type, input_dim=4):
         super(_Decoder, self).__init__()
         self.scale_param = scale_param
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, decoder_hidden_dim),
-            nn.ReLU(), nn.Linear(decoder_hidden_dim, input_dim),
-            nn.Sigmoid())
+        if decoder_type == 'single_hidden':
+            self.decoder = nn.Sequential(
+                nn.Linear(latent_dim, decoder_hidden_dim),
+                nn.ReLU(), nn.Linear(decoder_hidden_dim, input_dim),
+                nn.Sigmoid())
+        elif decoder_type == 'single_affine':
+            self.decoder = nn.Sequential(
+                nn.Linear(latent_dim, input_dim),
+                nn.Sigmoid())
 
     def forward(self, z):
         mean_out = self.decoder(z).clamp(Constants.eta, 1 - Constants.eta)
@@ -151,11 +156,14 @@ class LLDVAE(nn.Module):
         self.decoder_hidden_dim = params['model_params']['decoder_hidden_dim']
         decoder_scale_param = params['model_params'].get(
             'likelihood_scale_param', 0.75)
+        decoder_type = params['model_params']['decoder_type']
         self.decoder = _Decoder(self.latent_dim, 
                                 self.decoder_hidden_dim, 
-                                decoder_scale_param)
+                                decoder_scale_param,
+                                decoder_type)
         # trans_dim = number of transition matrices in state update equation
         self.trans_dim = params['model_params']['trans_dim'] 
+        self.alphas_type = params['model_params']['alphas_type']
         self.batch_size = params['training_params']['batch_size']
         self.rand_seed = params['training_params']['rand_seed']
         self.pw = getattr(dist, params['model_params'].get(
@@ -164,6 +172,7 @@ class LLDVAE(nn.Module):
             'likelihood_dist', 'Normal'))
         self.qw_x = getattr(dist, params['model_params'].get(
             'posterior_dist', 'Normal'))
+        self.save_all = params['model_params'].get('save_all', False)
 
         prior_grad = {'requires_grad': params['training_params'][
             'learn_prior']}
@@ -184,11 +193,14 @@ class LLDVAE(nn.Module):
         # Build the transition network: self.trans_net determines 
         # the weights on the transition matrices in the state update equation.
         if self.trans_dim == 0:
-            num_mats = 1
+            trans_net_out = 1
         else:
-            num_mats = self.trans_dim
+            if self.alphas_type == 'coupled':
+                trans_net_out = self.trans_dim
+            elif self.alphas_type == 'uncoupled':
+                trans_net_out = self.trans_dim * 3
         self.trans_net = nn.Sequential(
-            nn.Linear((self.latent_dim + self.u_dim), num_mats),
+            nn.Linear((self.latent_dim + self.u_dim), trans_net_out),
             nn.Softmax(dim=1))
 
         # Innovation/noise initialization
@@ -214,7 +226,8 @@ class LLDVAE(nn.Module):
                             dim=2) * self._pw_params[1].size(-1)
         return self._pw_params[0], pw_vars
 
-    def forward(self, xu, generate_mode=False, clamp=False, z0_supplied=None):
+    def forward(self, xu, generate_mode=False, clamp=False, z0_supplied=None,
+                save_all=False):
         """Compute a forward pass of the model.
 
         Args
@@ -248,14 +261,26 @@ class LLDVAE(nn.Module):
         u = xu[:, :, self.input_dim:]
         setup_vars = self._setup_propagate(xu, generate_mode, clamp)
         if z0_supplied is None:
-            w, z, w_means, w_vars = self._propagate(*setup_vars, u, 
-                                                    generate_mode)
+            if save_all:
+                w, z, w_means, w_vars, alphas, As, Bs, Cs = \
+                    self._propagate_save_all(*setup_vars, u, generate_mode)
+
+            else:
+                w, z, w_means, w_vars = self._propagate(*setup_vars, u, 
+                                                        generate_mode)
+                alphas, As, Bs, Cs = None, None, None, None
         else:
-            w, z, w_means, w_vars = self._propagate(z0_supplied, 
-                                                    *setup_vars[1:], u, 
-                                                    generate_mode)
+            if save_all:
+                w, z, w_means, w_vars, alphas, As, Bs, Cs = \
+                    self._propagate_save_all(z0_supplied, *setup_vars[1:], u, 
+                                             generate_mode)
+            else:
+                w, z, w_means, w_vars = self._propagate(z0_supplied, 
+                                                        *setup_vars[1:], u, 
+                                                        generate_mode)
+                alphas, As, Bs, Cs = None, None, None, None
         px_w = self.px_w(*self.decoder(z))
-        return x_in, px_w, w, z, w_means, w_vars
+        return x_in, px_w, w, z, w_means, w_vars, alphas, As, Bs, Cs
 
     def _init_w_z(self, batch_size):
         w0_means = self.w0_means.unsqueeze(0).expand(1, batch_size, self.w_dim)
@@ -304,14 +329,40 @@ class LLDVAE(nn.Module):
             C_t = torch.stack(n_data * [self.C_mats[0, :, :]])
         else:
             alpha_t = self._gen_trans_params(z_t, u_t)
-            A_t = self._batch_wsum(self.A_mats, alpha_t)
-            B_t = self._batch_wsum(self.B_mats, alpha_t)
-            C_t = self._batch_wsum(self.C_mats, alpha_t)
+            A_t = self._batch_wsum(self.A_mats, 
+                alpha_t[:, :self.trans_dim])
+            B_t = self._batch_wsum(self.B_mats, 
+                alpha_t[:, self.trans_dim:2*self.trans_dim])
+            C_t = self._batch_wsum(self.C_mats, 
+                alpha_t[:, 2*self.trans_dim:])
 
         z_t_next = (torch.bmm(A_t, z_t.unsqueeze(2))
                     + torch.bmm(B_t, u_t.unsqueeze(2))
                     + torch.bmm(C_t, w_t.unsqueeze(2)))
         return z_t_next.squeeze().unsqueeze(0)
+
+    def _update_state_save_all(self, z_t, u_t, w_t):
+        if self.trans_dim == 0:
+            n_data = z_t.shape[0]
+            alpha_t = torch.tensor([0], device=self.device)
+            A_t = torch.stack(n_data * [self.A_mats[0, :, :]])
+            B_t = torch.stack(n_data * [self.B_mats[0, :, :]])
+            C_t = torch.stack(n_data * [self.C_mats[0, :, :]])
+        else:
+            alpha_t = self._gen_trans_params(z_t, u_t)
+            if self.alphas_type == 'coupled':
+                A_t = self._batch_wsum(self.A_mats, alpha_t)
+                B_t = self._batch_wsum(self.B_mats, alpha_t)
+                C_t = self._batch_wsum(self.C_mats, alpha_t)
+            elif self.alphas_type == 'uncoupled':
+                A_t = self._batch_wsum(self.A_mats, alpha_t)
+                B_t = self._batch_wsum(self.B_mats, alpha_t)
+                C_t = self._batch_wsum(self.C_mats, alpha_t)
+
+        z_t_next = (torch.bmm(A_t, z_t.unsqueeze(2))
+                    + torch.bmm(B_t, u_t.unsqueeze(2))
+                    + torch.bmm(C_t, w_t.unsqueeze(2)))
+        return z_t_next.squeeze().unsqueeze(0), alpha_t, A_t, B_t, C_t
 
     def _propagate(self, z, w, h, w_means, w_vars, u, generate_mode):
         time_steps = u.shape[0]
@@ -332,3 +383,36 @@ class LLDVAE(nn.Module):
             z_t_next = self._update_state(z_t, u_t, w_t)
             z = torch.cat((z, z_t_next), 0)
         return w, z, w_means, w_vars
+
+    def _propagate_save_all(self, z, w, h, w_means, w_vars, u, generate_mode):
+        time_steps = u.shape[0]
+        n_data = u.shape[1]
+        alphas = torch.zeros(time_steps, n_data, 
+                             self.trans_dim, device=self.device)
+        As = torch.zeros(time_steps, n_data, self.latent_dim, self.latent_dim,
+                         device=self.device)
+        Bs = torch.zeros(time_steps, n_data, self.latent_dim, self.u_dim,
+                         device=self.device)
+        Cs = torch.zeros(time_steps, n_data, self.latent_dim, self.latent_dim,
+                         device=self.device)
+        for t in range(time_steps - 1):
+            z_t = z[t, :, :]
+            u_t = u[t, :, :]
+
+            if generate_mode:
+                w_t = w[t, :, :]
+            else:
+                h_t = h[t, :, :]
+                w_means_t, w_vars_t = self.encoder_hz2w(h_t, z_t)
+                w_t = self.qw_x(w_means_t, w_vars_t).rsample()
+                w_means = torch.cat((w_means, w_means_t.unsqueeze(0)), 0)
+                w_vars = torch.cat((w_vars, w_vars_t.unsqueeze(0)), 0)
+                w = torch.cat((w, w_t.unsqueeze(0)), 0)
+
+            z_t_next, alpha_t, A_t, B_t, C_t = self._update_state_save_all(z_t, u_t, w_t)
+            z = torch.cat((z, z_t_next), 0)
+            alphas[t, :, :] = alpha_t
+            As[t, :, :, :] = A_t
+            Bs[t, :, :, :] = B_t
+            Cs[t, :, :, :] = C_t
+        return w, z, w_means, w_vars, alphas, As, Bs, Cs

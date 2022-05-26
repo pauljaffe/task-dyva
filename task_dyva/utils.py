@@ -41,7 +41,8 @@ class ConfigMixin:
                      'trans_dim', 'prior_dist', 'posterior_dist', 
                      'likelihood_dist', 'likelihood_scale_param',
                      'model_type', 'dynamics_matrix_mult', 
-                     'dynamics_init_method'}
+                     'dynamics_init_method', 'decoder_type',
+                     'alphas_type'}
 
     _training_params = {'num_epochs', 'batch_size', 'train_frac', 'val_frac', 
                         'test_frac', 'optim_alg', 'LR', 'weight_decay', 
