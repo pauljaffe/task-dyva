@@ -118,6 +118,7 @@ class EbbFlowDataset(Dataset):
         """
 
         discrete = {key: vals[idx] for key, vals in self.discrete.items()}
+        self.update_smoothing(9999999)
         cnp = self[idx].numpy()
         continuous = {'urespdir': cnp[:, :4], 'point_dir': cnp[:, 4:8],
                       'mv_dir': cnp[:, 8:12], 'task_cue': cnp[:, 12:]}
@@ -351,6 +352,11 @@ class EbbFlowStats(EbbFlowDataset):
             self.pca_latents = None
             self.pca_explained_var = None
             self.pca_obj = None
+        if kwargs['alphas'] is not None:
+            self.alphas = kwargs['alphas'].cpu().detach().numpy()
+            self.As = kwargs['As'].cpu().detach().numpy()
+            self.Bs = kwargs['Bs'].cpu().detach().numpy()
+            self.Cs = kwargs['Cs'].cpu().detach().numpy()
         self.windowed = None
         self._get_trial_data()
 
@@ -926,7 +932,7 @@ class EbbFlowGameData():
             self.discrete[key].append(data[key])
 
     def plot(self, rates=None, do_plot=False, stim_ylims=None, 
-             resp_ylims=None):
+             resp_ylims=None, **kwargs):
         """Plot the continuous representation of the stimuli and responses
         for this game. For the responses, the continuous format 
         of the user's responses is plotted (used to train the model). 
@@ -944,15 +950,23 @@ class EbbFlowGameData():
             further tweaking. 
         """
 
+        alphas = kwargs.get('alphas', None)
         textsize = 14
-        figsize = (10, 18)
+        if alphas is None:
+            figsize = (10, 18)
+            n_plots = 14
+            fig, axes = plt.subplots(n_plots, 1, figsize=figsize)
+        else:
+            figsize = (10, 22)
+            n_alphas = alphas.shape[1]
+            n_plots = 14 + n_alphas
+            fig, axes = plt.subplots(n_plots, 1, figsize=figsize)
         colors = ['royalblue', 'crimson', 'forestgreen', 'orange']
         n_time = self.continuous['point_dir'].shape[0]
         x_plot = np.arange(n_time) * self.step
         stimulus_ylims = [-0.5, 1.5] if stim_ylims is None else stim_ylims
         response_ylims = [-0.2, 1.2] if resp_ylims is None else resp_ylims
 
-        fig, axes = plt.subplots(14, 1, figsize=figsize)
         # Pointing stimuli
         for d in range(4):
             sns.lineplot(x=x_plot, y=self.continuous['point_dir'][:, d], 
@@ -1007,16 +1021,25 @@ class EbbFlowGameData():
             else:
                 axes[d + 10].get_legend().remove()
 
+        # Alphas
+        if alphas is not None:
+            for d in range(n_alphas):
+                sns.lineplot(x=x_plot, y=alphas[:, d], 
+                             ax=axes[d + 14], color=colors[2])
+                axes[d + 14].set_ylabel(f'alpha {d}', fontsize=textsize)
+                if d == 0:
+                    axes[d + 14].set_title('alphas', fontsize=textsize)
+
         # Adjust
         [axes[d].set_ylim(stimulus_ylims) for d in range(10)]
         [axes[d].set_ylim(response_ylims) for d in range(10, 14)]
-        [axes[d].set_yticks([]) for d in range(14)]
-        [axes[d].set_xticklabels([]) for d in range(13)]
+        [axes[d].set_yticks([]) for d in range(n_plots)]
+        [axes[d].set_xticklabels([]) for d in range(n_plots - 1)]
         t_max = n_time * self.step
-        axes[13].set_xticks(np.arange(0, t_max + 1000, 1000))
-        axes[13].tick_params(axis="x", labelsize=textsize)
-        axes[13].set_xlabel('time (ms)', fontsize=textsize)
-        [axes[d].set_xlim([0, x_plot[-1]]) for d in range(14)]
+        axes[n_plots - 1].set_xticks(np.arange(0, t_max + 1000, 1000))
+        axes[n_plots - 1].tick_params(axis="x", labelsize=textsize)
+        axes[n_plots - 1].set_xlabel('time (ms)', fontsize=textsize)
+        [axes[d].set_xlim([0, x_plot[-1]]) for d in range(n_plots)]
 
         plt.tight_layout()
         if do_plot:

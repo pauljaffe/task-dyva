@@ -505,11 +505,12 @@ class Experiment(nn.Module,
         plot_xu = copy.deepcopy(dataset.xu)[:, inds, :]
         plot_data.xu = plot_xu
         plot_loader = self._get_data_loader(plot_data, shuffle=False)
+        plot_loader.dataset.update_smoothing(9999999)
         return next(iter(plot_loader)).batch.to(self.device)
 
     def plot_generated_sample(self, epoch, dataset, do_plot=False, 
                               sample_ind=None, stim_ylims=None,
-                              resp_ylims=None):
+                              resp_ylims=None, save_all=False):
         """Plot the model inputs and outputs for a single sample (game).
 
         Args
@@ -541,19 +542,19 @@ class Experiment(nn.Module,
             gen_inds = [sample_ind, 0]
 
         # Generate model outputs from dataset
-#        xu_sample = dataset[gen_inds].to(self.device)
         plot_batch = self._get_samples_for_plot(dataset, gen_inds)
-#        xu_sample = dataset.xu[:, gen_inds, :].to(self.device)
         gen_outputs = self.model(plot_batch, generate_mode=True,
-                                 clamp=False)
-#        gen_outputs = self.model.forward(xu_sample, generate_mode=True, 
-#                                         clamp=False)
+                                 clamp=False, save_all=save_all)
         rate_out = gen_outputs[1].mean
         rate_np = rate_out.cpu().detach()[:, 0, :].squeeze().numpy()
         trial = dataset.get_processed_sample(gen_inds[0])
         trial.get_extra_stats(output_rates=rate_np)
+        if save_all:
+            kwargs = {'alphas': gen_outputs[6].cpu().detach()[:, 0, :].squeeze().numpy()}
+        else:
+            kwargs = {}
         trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
-                                  resp_ylims=resp_ylims)
+                                  resp_ylims=resp_ylims, **kwargs)
 
         if self.do_logging:
             assign_key = f'model_outputs/epoch{epoch}'
@@ -579,7 +580,7 @@ class Experiment(nn.Module,
     def get_behavior_metrics(self, dataset, save_fn=None, save_local=False, 
                              load_local=False, analyze_latents=False,
                              get_model_outputs=True, stats_dir=None,
-                             **kwargs):
+                             save_all=False, **kwargs):
         """Get behavioral stats for user and model from the supplied dataset.
 
         Args
@@ -620,23 +621,45 @@ class Experiment(nn.Module,
         else:
             latents = None
 
+        if save_all:
+            alphas, As, Bs, Cs = [], [], [], []
+        else:
+            alphas, As, Bs, Cs = None, None, None, None
+
         if get_model_outputs:
             loader = self._get_data_loader(dataset, shuffle=False)
+            loader.dataset.update_smoothing(0)
             rates = []
             for batch_ind, batch in enumerate(loader):
                 loaded_batch = batch.batch.to(self.device)
                 outputs = self.model.forward(loaded_batch,
-                                             generate_mode=True, clamp=False)
+                                             generate_mode=True, clamp=False,
+                                             save_all=save_all)
                 rates.append(outputs[1].mean)
                 if analyze_latents:
                     latents.append(outputs[3])
+                if save_all:
+                    alphas.append(outputs[6])
+                    As.append(outputs[7])
+                    Bs.append(outputs[8])
+                    Cs.append(outputs[9])
 
             rates = torch.cat(rates, 1)
             if analyze_latents:
                 latents = torch.cat(latents, 1)
+            if save_all:
+                alphas = torch.cat(alphas, 1)
+                As = torch.cat(As, 1)
+                Bs = torch.cat(Bs, 1)
+                Cs = torch.cat(Cs, 1)
         else:
             rates = None
 
+        kwargs['alphas'] = alphas
+        kwargs['As'] = As
+        kwargs['Bs'] = Bs
+        kwargs['Cs'] = Cs
+        
         stats_obj = EbbFlowStats(rates, dataset, latents=latents, **kwargs)
         stats = stats_obj.get_stats()
 
