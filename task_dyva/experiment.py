@@ -109,9 +109,14 @@ class Experiment(nn.Module,
 
         # enforce reproducibility
         rand_seed = self.config_params['training_params']['rand_seed']
+        data_rand_seed = self.config_params['data_params'].get('data_rand_seed', None)
         torch.manual_seed(rand_seed)
         random.seed(rand_seed)
         self.rng = np.random.default_rng(rand_seed)
+        if data_rand_seed is not None:
+            self.data_rng = np.random.default_rng(data_rand_seed)
+        else:
+            self.data_rng = None
 
         self.objective = getattr(
             objectives, self.config_params['training_params']['objective'])
@@ -689,7 +694,10 @@ class Experiment(nn.Module,
                 n_val = int(np.round(n_data * val_frac))
                 indices = list(range(n_data))
 
-                self.rng.shuffle(indices)
+                if self.data_rng is not None:
+                    self.data_rng.shuffle(indices)
+                else:
+                    self.rng.shuffle(indices)
                 train_inds = indices[:n_train]
                 val_inds = indices[n_train:n_train + n_val]
                 test_inds = indices[n_train + n_val:]
