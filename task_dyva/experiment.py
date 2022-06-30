@@ -141,7 +141,7 @@ class Experiment(nn.Module,
 
             self.eval()
             with torch.no_grad():
-                train_to_log = {'loss': train_loss, 'NLL': train_NLL}
+                train_to_log = {'loss': train_loss.item(), 'NLL': train_NLL.item()}
                 self._log_metrics(train_to_log, 'train', epoch)
 
                 if epoch % self.keep_every == 0:
@@ -175,8 +175,8 @@ class Experiment(nn.Module,
         return loader
 
     def _batch_train(self, loader, mode):
-        NLL_tot = 0
-        loss_tot = 0
+        NLL_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
+        loss_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
         for batch in loader:
             loaded_batch = batch.batch.to(self.device)
             n_time = loaded_batch.shape[0]
@@ -201,8 +201,8 @@ class Experiment(nn.Module,
                 this_NLL, this_loss = self.objective(
                     self.model, loaded_batch, self._max_anneal)
 
-            loss_tot += this_loss.item() / n_time
-            NLL_tot += this_NLL.item() / n_time
+            loss_tot += this_loss / n_time
+            NLL_tot += this_NLL / n_time
 
         loss_avg = loss_tot / len(loader)
         NLL_avg = NLL_tot / len(loader)
