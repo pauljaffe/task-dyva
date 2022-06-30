@@ -422,20 +422,28 @@ class EbbFlowStats(EbbFlowDataset):
         """
 
         stats = {}
-        stay_inds = self.select(**{'is_switch': 0})
-        switch_inds = self.select(**{'is_switch': 1})
+        u_stay_inds = self.select(**{'is_switch': 0, 'ucorrect': 1, 
+                                     'u_prev_correct': 1})
+        m_stay_inds = self.select(**{'is_switch': 0, 'mcorrect': 1, 
+                                     'm_prev_correct': 1})
+        u_switch_inds = self.select(**{'is_switch': 1, 'ucorrect': 1, 
+                                       'u_prev_correct': 1})
+        m_switch_inds = self.select(**{'is_switch': 1, 'mcorrect': 1, 
+                                       'm_prev_correct': 1})
         # response times
-        u_stay_rts = self.df['urt_ms'][stay_inds]
-        m_stay_rts = self.df['mrt_ms'][stay_inds]
-        u_switch_rts = self.df['urt_ms'][switch_inds]
-        m_switch_rts = self.df['mrt_ms'][switch_inds]
+        u_stay_rts = self.df['urt_ms'][u_stay_inds]
+        m_stay_rts = self.df['mrt_ms'][m_stay_inds]
+        u_switch_rts = self.df['urt_ms'][u_switch_inds]
+        m_switch_rts = self.df['mrt_ms'][m_switch_inds]
         stats['u_switch_cost'] = u_switch_rts.mean() - u_stay_rts.mean()
         stats['m_switch_cost'] = m_switch_rts.mean() - m_stay_rts.mean()
         # accuracy
-        u_stay_c = self.df['ucorrect'][stay_inds]
-        m_stay_c = self.df['mcorrect'][stay_inds]
-        u_switch_c = self.df['ucorrect'][switch_inds]
-        m_switch_c = self.df['mcorrect'][switch_inds]
+        acc_stay_inds = self.select(**{'is_switch': 0})
+        acc_switch_inds = self.select(**{'is_switch': 1})
+        u_stay_c = self.df['ucorrect'][acc_stay_inds]
+        m_stay_c = self.df['mcorrect'][acc_stay_inds]
+        u_switch_c = self.df['ucorrect'][acc_switch_inds]
+        m_switch_c = self.df['mcorrect'][acc_switch_inds]
         stats['u_acc_switch_cost'] = u_stay_c.mean() - u_switch_c.mean()
         stats['m_acc_switch_cost'] = m_stay_c.mean() - m_switch_c.mean()
         return stats
@@ -455,20 +463,24 @@ class EbbFlowStats(EbbFlowDataset):
         """
 
         stats = {}
-        con_inds = self.select(**{'is_congruent': 1})
-        incon_inds = self.select(**{'is_congruent': 0})
+        u_con_inds = self.select(**{'is_congruent': 1, 'ucorrect': 1})
+        m_con_inds = self.select(**{'is_congruent': 1, 'mcorrect': 1})
+        u_incon_inds = self.select(**{'is_congruent': 0, 'ucorrect': 1})
+        m_incon_inds = self.select(**{'is_congruent': 0, 'mcorrect': 1})
         # response times
-        u_con_rts = self.df['urt_ms'][con_inds]
-        m_con_rts = self.df['mrt_ms'][con_inds]
-        u_incon_rts = self.df['urt_ms'][incon_inds]
-        m_incon_rts = self.df['mrt_ms'][incon_inds]
+        u_con_rts = self.df['urt_ms'][u_con_inds]
+        m_con_rts = self.df['mrt_ms'][m_con_inds]
+        u_incon_rts = self.df['urt_ms'][u_incon_inds]
+        m_incon_rts = self.df['mrt_ms'][m_incon_inds]
         stats['u_con_effect'] = u_incon_rts.mean() - u_con_rts.mean()
         stats['m_con_effect'] = m_incon_rts.mean() - m_con_rts.mean()
         # accuracy
-        u_con_c = self.df['ucorrect'][con_inds]
-        m_con_c = self.df['mcorrect'][con_inds]
-        u_incon_c = self.df['ucorrect'][incon_inds]
-        m_incon_c = self.df['mcorrect'][incon_inds]
+        acc_con_inds = self.select(**{'is_congruent': 1})
+        acc_incon_inds = self.select(**{'is_congruent': 0})
+        u_con_c = self.df['ucorrect'][acc_con_inds]
+        m_con_c = self.df['mcorrect'][acc_con_inds]
+        u_incon_c = self.df['ucorrect'][acc_incon_inds]
+        m_incon_c = self.df['mcorrect'][acc_incon_inds]
         stats['u_acc_con_effect'] = u_con_c.mean() - u_incon_c.mean()
         stats['m_acc_con_effect'] = m_con_c.mean() - m_incon_c.mean()
         return stats
