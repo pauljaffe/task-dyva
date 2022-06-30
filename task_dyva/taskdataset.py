@@ -12,7 +12,6 @@ import copy
 import pickle
 from itertools import product
 from collections import defaultdict
-import pdb
 
 import torch
 from torch.utils.data import Dataset
@@ -33,7 +32,7 @@ class EbbFlowDataset(Dataset):
     Data are stored in two separate formats with a one-to-one correspondence: 
     self.xu contains the model inputs: this is the "continuous" format.
     self.discrete contains the same data in an alternative format
-    that facilitates analysis.
+    which facilitates analysis.
 
     Args
     ----
@@ -72,8 +71,14 @@ class EbbFlowDataset(Dataset):
         self.preprocessed = preprocessed
         self.split = split
         self.resampling_type = self.params.get('data_augmentation_type', None)
-        self._build_transforms(transform, transform_params,
-                               pre_transform, pre_transform_params)
+        # set up data transforms
+        self.default_pre = [T.SmoothResponses(), T._Trim()]
+        self.supplied_pre = pre_transform
+        self.supplied_pre_params = pre_transform_params
+        if transform is not None:
+            self.transform = T.Compose(
+                [t(p) for t, p in zip(transform, transform_params)])
+
         self.process()  # also saves processed data
         self.xu = torch.load(self.processed_paths[0])  # xu = model inputs
         with open(self.processed_paths[1], 'rb') as path:
@@ -81,28 +86,6 @@ class EbbFlowDataset(Dataset):
             self.discrete = other_data['discrete']
             self.game_ids = other_data['game_ids']
             self.resampling_info = other_data['resampling']
-
-    def _build_transforms(self, transform, transform_params,
-                          pre_transform, pre_transform_params):
-
-        # build pre transform - usually just outlier filtering
-        if pre_transform is not None:
-            pre = [t(p) for t, p in zip(pre_transform, pre_transform_params)]
-            self.pre_transform = T.Compose(pre)
-
-        # build transform
-        default_transform = [T.SmoothResponses(self.params)]
-        if transform is not None:
-            supplied_t = [t(p) for t, p in zip(transform, transform_params)]
-            tr = default_transform + supplied_t
-        else:
-            tr = default_transform
-        self.transform_list = tr
-
-    def update_smoothing(self, epoch):
-        # Update the kernel used to smoothing the response template
-        self.transform_list[0]._update_sm_kernel(epoch)
-        self.transform = T.Compose(self.transform_list)
 
     def get_processed_sample(self, idx):
         """Return an EbbFlowGameData instance with data from a single game.
@@ -118,7 +101,6 @@ class EbbFlowDataset(Dataset):
         """
 
         discrete = {key: vals[idx] for key, vals in self.discrete.items()}
-        self.update_smoothing(9999999)
         cnp = self[idx].numpy()
         continuous = {'urespdir': cnp[:, :4], 'point_dir': cnp[:, 4:8],
                       'mv_dir': cnp[:, 8:12], 'task_cue': cnp[:, 12:]}
@@ -183,6 +165,15 @@ class EbbFlowDataset(Dataset):
             self.resampling_info = resampling_info
         else:
             sm_params = copy.deepcopy(self.params)
+
+        # Build pre transform
+        self.default_pre[0]._build_sm_kernel(sm_params)
+        if self.supplied_pre is not None:
+            supplied_pre = [t(p) for t, p in zip(self.supplied_pre, 
+                                                 self.supplied_pre_params)]
+            self.pre_transform = T.Compose(self.default_pre + supplied_pre)
+        else:
+            self.pre_transform = T.Compose(self.default_pre)
 
         # Process each game
         data_list = self._get_preprocessed_games()
@@ -352,11 +343,6 @@ class EbbFlowStats(EbbFlowDataset):
             self.pca_latents = None
             self.pca_explained_var = None
             self.pca_obj = None
-        if kwargs['alphas'] is not None:
-            self.alphas = kwargs['alphas'].cpu().detach().numpy()
-            self.As = kwargs['As'].cpu().detach().numpy()
-            self.Bs = kwargs['Bs'].cpu().detach().numpy()
-            self.Cs = kwargs['Cs'].cpu().detach().numpy()
         self.windowed = None
         self._get_trial_data()
 
@@ -627,8 +613,9 @@ class EbbFlowGameData():
                                    + cls.extra_time_for_smooth)
                                   / params['step_size']))
         continuous = {key: np.zeros((num_samples, d))
-                      for key, d in zip(cls.continuous_fields,
-                                        cls.dims)}
+                      for key, d in zip(cls.continuous_fields[1:], 
+                                        cls.dims[1:])}
+        continuous['urespdir'] = np.zeros((num_samples, 4, 4))
         return discrete, continuous
 
     def standard_prep(self):
@@ -808,8 +795,10 @@ class EbbFlowGameData():
         for key in ['mv_dir', 'point_dir', 'task_cue']:
             self.continuous[key][trial_info['onset']:trial_info['offset'],
                                  trial_info[key]] = 1
+
         abs_rt = trial_info['onset'] + trial_info['urt_samples']
-        self.continuous['urespdir'][abs_rt, trial_info['urespdir']] = 1
+        self.continuous['urespdir'][abs_rt, trial_info['urespdir'], 
+                                    trial_info['trial_type']] = 1
 
     def get_extra_stats(self, output_rates=None, latents=None, 
                         pca_latents=None, **kwargs):
@@ -932,7 +921,7 @@ class EbbFlowGameData():
             self.discrete[key].append(data[key])
 
     def plot(self, rates=None, do_plot=False, stim_ylims=None, 
-             resp_ylims=None, **kwargs):
+             resp_ylims=None):
         """Plot the continuous representation of the stimuli and responses
         for this game. For the responses, the continuous format 
         of the user's responses is plotted (used to train the model). 
@@ -950,23 +939,15 @@ class EbbFlowGameData():
             further tweaking. 
         """
 
-        alphas = kwargs.get('alphas', None)
         textsize = 14
-        if alphas is None:
-            figsize = (10, 18)
-            n_plots = 14
-            fig, axes = plt.subplots(n_plots, 1, figsize=figsize)
-        else:
-            figsize = (10, 22)
-            n_alphas = alphas.shape[1]
-            n_plots = 14 + n_alphas
-            fig, axes = plt.subplots(n_plots, 1, figsize=figsize)
+        figsize = (10, 18)
         colors = ['royalblue', 'crimson', 'forestgreen', 'orange']
         n_time = self.continuous['point_dir'].shape[0]
         x_plot = np.arange(n_time) * self.step
         stimulus_ylims = [-0.5, 1.5] if stim_ylims is None else stim_ylims
         response_ylims = [-0.2, 1.2] if resp_ylims is None else resp_ylims
 
+        fig, axes = plt.subplots(14, 1, figsize=figsize)
         # Pointing stimuli
         for d in range(4):
             sns.lineplot(x=x_plot, y=self.continuous['point_dir'][:, d], 
@@ -1021,25 +1002,16 @@ class EbbFlowGameData():
             else:
                 axes[d + 10].get_legend().remove()
 
-        # Alphas
-        if alphas is not None:
-            for d in range(n_alphas):
-                sns.lineplot(x=x_plot, y=alphas[:, d], 
-                             ax=axes[d + 14], color=colors[2])
-                axes[d + 14].set_ylabel(f'alpha {d}', fontsize=textsize)
-                if d == 0:
-                    axes[d + 14].set_title('alphas', fontsize=textsize)
-
         # Adjust
         [axes[d].set_ylim(stimulus_ylims) for d in range(10)]
         [axes[d].set_ylim(response_ylims) for d in range(10, 14)]
-        [axes[d].set_yticks([]) for d in range(n_plots)]
-        [axes[d].set_xticklabels([]) for d in range(n_plots - 1)]
+        [axes[d].set_yticks([]) for d in range(14)]
+        [axes[d].set_xticklabels([]) for d in range(13)]
         t_max = n_time * self.step
-        axes[n_plots - 1].set_xticks(np.arange(0, t_max + 1000, 1000))
-        axes[n_plots - 1].tick_params(axis="x", labelsize=textsize)
-        axes[n_plots - 1].set_xlabel('time (ms)', fontsize=textsize)
-        [axes[d].set_xlim([0, x_plot[-1]]) for d in range(n_plots)]
+        axes[13].set_xticks(np.arange(0, t_max + 1000, 1000))
+        axes[13].tick_params(axis="x", labelsize=textsize)
+        axes[13].set_xlabel('time (ms)', fontsize=textsize)
+        [axes[d].set_xlim([0, x_plot[-1]]) for d in range(14)]
 
         plt.tight_layout()
         if do_plot:

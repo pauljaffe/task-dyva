@@ -104,19 +104,12 @@ class Experiment(nn.Module,
             else pre_transform_params
         self.transform_params = [] if transform_params is None \
             else transform_params
-        self.mixed_precision = self.config_params['training_params'].get(
-            'mixed_precision', False)
 
         # enforce reproducibility
         rand_seed = self.config_params['training_params']['rand_seed']
-        data_rand_seed = self.config_params['data_params'].get('data_rand_seed', None)
         torch.manual_seed(rand_seed)
         random.seed(rand_seed)
         self.rng = np.random.default_rng(rand_seed)
-        if data_rand_seed is not None:
-            self.data_rng = np.random.default_rng(data_rand_seed)
-        else:
-            self.data_rng = None
 
         self.objective = getattr(
             objectives, self.config_params['training_params']['objective'])
@@ -131,8 +124,6 @@ class Experiment(nn.Module,
         self._prep_data()
         self._build_model()
         self._build_optimizer()
-        if self.mixed_precision and self.device != 'cpu':
-            self._build_scaler()
         if self.do_early_stopping:
             self._setup_early_stopping()
 
@@ -145,20 +136,17 @@ class Experiment(nn.Module,
         train_loader = self._get_data_loader(self.train_dataset)
         val_loader = self._get_data_loader(self.val_dataset)
         for epoch in range(self.start_epoch, self.num_epochs):
-            train_loader.dataset.update_smoothing(epoch)
-            val_loader.dataset.update_smoothing(epoch)
-
             self.train()
             train_NLL, train_loss = self._batch_train(train_loader, 'train')
 
             self.eval()
             with torch.no_grad():
-                train_to_log = {'loss': train_loss.item(), 'NLL': train_NLL.item()}
+                train_to_log = {'loss': train_loss, 'NLL': train_NLL}
                 self._log_metrics(train_to_log, 'train', epoch)
 
                 if epoch % self.keep_every == 0:
                     val_NLL, val_loss = self._batch_train(val_loader, 'val')
-                    val_to_log = {'loss': val_loss.item(), 'NLL': val_NLL.item()}
+                    val_to_log = {'loss': val_loss, 'NLL': val_NLL}
                     self._log_metrics(val_to_log, 'val', epoch)
                     self._save_checkpoint(epoch)
                     val_metrics = self.get_behavior_metrics(self.val_dataset)
@@ -187,8 +175,8 @@ class Experiment(nn.Module,
         return loader
 
     def _batch_train(self, loader, mode):
-        NLL_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
-        loss_tot = torch.tensor([0.0], device=self.device, requires_grad=False)
+        NLL_tot = 0
+        loss_tot = 0
         for batch in loader:
             loaded_batch = batch.batch.to(self.device)
             n_time = loaded_batch.shape[0]
@@ -199,45 +187,25 @@ class Experiment(nn.Module,
 
                 if self.iteration % self.update_every == 0:
                     self._update_anneal_param()
+                this_NLL, this_loss = self.objective(self.model, loaded_batch,
+                                                     self.anneal_param)
+                this_loss.backward()
 
-                if self.mixed_precision and self.device != 'cpu':
-                    with torch.cuda.amp.autocast():
-                        this_NLL, this_loss = self.objective(self.model, loaded_batch,
-                                                             self.anneal_param)
-                    self.scaler.scale(this_loss).backward()
-                    self.scaler.unscale_(self.optimizer)
-                    if self.clip_grads:
-                        torch.nn.utils.clip_grad_norm_(self.parameters(), 
-                                                       self.clip_val)
-                    self.scaler.step(self.optimizer)
-                    self.scaler.update()
-                else:
-                    this_NLL, this_loss = self.objective(self.model, loaded_batch,
-                                                         self.anneal_param)
-                    this_loss.backward()
-
-                    if self.clip_grads:
-                        torch.nn.utils.clip_grad_norm_(self.parameters(), 
-                                                       self.clip_val)
-                    self.optimizer.step()
-
+                if self.clip_grads:
+                    torch.nn.utils.clip_grad_norm_(self.parameters(), 
+                                                   self.clip_val)
+                self.optimizer.step()
                 self.iteration += 1
 
             elif mode == 'val':
-                if self.mixed_precision and self.device != 'cpu': 
-                    with torch.cuda.amp.autocast():
-                        this_NLL, this_loss = self.objective(
-                            self.model, loaded_batch, self._max_anneal)
-                else:
-                    this_NLL, this_loss = self.objective(
-                        self.model, loaded_batch, self._max_anneal)
+                this_NLL, this_loss = self.objective(
+                    self.model, loaded_batch, self._max_anneal)
 
-            loss_tot += this_loss / n_time
-            NLL_tot += this_NLL / n_time
+            loss_tot += this_loss.item() / n_time
+            NLL_tot += this_NLL.item() / n_time
 
         loss_avg = loss_tot / len(loader)
         NLL_avg = NLL_tot / len(loader)
-
         return NLL_avg, loss_avg
 
     def _load_config(self, config, **kwargs):
@@ -306,8 +274,8 @@ class Experiment(nn.Module,
         if epoch is None:
             # Find epoch of most recent local checkpoint; if none exists,
             # create a new experiment.
-            checkpoint_fns = glob.glob(
-                f'{self.checkpoint_dir}/checkpoint_epoch*.pth')
+            checkpoint_fns = glob.glob(self.checkpoint_dir 
+                                       + 'checkpoint_epoch*.pth')
             if len(checkpoint_fns) == 0:
                 self._make_new_experiment()
                 return
@@ -365,24 +333,13 @@ class Experiment(nn.Module,
             save_counter = None
             save_score = None
 
-        if self.mixed_precision and self.device != 'cpu':
-            torch.save({'model_state': self.state_dict(),
-                        'optimizer_state': self.optimizer.state_dict(),
-                        'scaler': self.scaler.state_dict(),
-                        'epoch': epoch,
-                        'iteration': self.iteration,
-                        'stop_counter': save_counter,
-                        'stop_best_score': save_score},
-                       save_path)
-
-        else:
-            torch.save({'model_state': self.state_dict(),
-                        'optimizer_state': self.optimizer.state_dict(),
-                        'epoch': epoch,
-                        'iteration': self.iteration,
-                        'stop_counter': save_counter,
-                        'stop_best_score': save_score},
-                       save_path)
+        torch.save({'model_state': self.state_dict(),
+                    'optimizer_state': self.optimizer.state_dict(),
+                    'epoch': epoch,
+                    'iteration': self.iteration,
+                    'stop_counter': save_counter,
+                    'stop_best_score': save_score},
+                   save_path)
         if self.do_logging:
             # Also save checkpoint to Neptune
             self.logger['checkpoint_epoch'].log(epoch)
@@ -483,11 +440,6 @@ class Experiment(nn.Module,
         if self.checkpoint is not None:
             self.optimizer.load_state_dict(self.checkpoint['optimizer_state'])
 
-    def _build_scaler(self):
-        self.scaler = torch.cuda.amp.GradScaler()
-        if self.checkpoint is not None:
-            self.scaler.load_state_dict(self.checkpoint['scaler'])
-
     def _setup_early_stopping(self):
         patience = self.config_params['training_params'].get(
             'stop_patience', 20)
@@ -505,17 +457,9 @@ class Experiment(nn.Module,
             self.early_stopping.counter = self.checkpoint.get(
                 'stop_counter', 0)
 
-    def _get_samples_for_plot(self, dataset, inds):
-        plot_data = copy.deepcopy(dataset)
-        plot_xu = copy.deepcopy(dataset.xu)[:, inds, :]
-        plot_data.xu = plot_xu
-        plot_loader = self._get_data_loader(plot_data, shuffle=False)
-        plot_loader.dataset.update_smoothing(9999999)
-        return next(iter(plot_loader)).batch.to(self.device)
-
     def plot_generated_sample(self, epoch, dataset, do_plot=False, 
                               sample_ind=None, stim_ylims=None,
-                              resp_ylims=None, save_all=False):
+                              resp_ylims=None):
         """Plot the model inputs and outputs for a single sample (game).
 
         Args
@@ -547,19 +491,15 @@ class Experiment(nn.Module,
             gen_inds = [sample_ind, 0]
 
         # Generate model outputs from dataset
-        plot_batch = self._get_samples_for_plot(dataset, gen_inds)
-        gen_outputs = self.model(plot_batch, generate_mode=True,
-                                 clamp=False, save_all=save_all)
+        xu_sample = dataset.xu[:, gen_inds, :].to(self.device)
+        gen_outputs = self.model.forward(xu_sample, generate_mode=True, 
+                                         clamp=False)
         rate_out = gen_outputs[1].mean
         rate_np = rate_out.cpu().detach()[:, 0, :].squeeze().numpy()
         trial = dataset.get_processed_sample(gen_inds[0])
         trial.get_extra_stats(output_rates=rate_np)
-        if save_all:
-            kwargs = {'alphas': gen_outputs[6].cpu().detach()[:, 0, :].squeeze().numpy()}
-        else:
-            kwargs = {}
         trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
-                                  resp_ylims=resp_ylims, **kwargs)
+                                  resp_ylims=resp_ylims)
 
         if self.do_logging:
             assign_key = f'model_outputs/epoch{epoch}'
@@ -585,7 +525,7 @@ class Experiment(nn.Module,
     def get_behavior_metrics(self, dataset, save_fn=None, save_local=False, 
                              load_local=False, analyze_latents=False,
                              get_model_outputs=True, stats_dir=None,
-                             save_all=False, **kwargs):
+                             **kwargs):
         """Get behavioral stats for user and model from the supplied dataset.
 
         Args
@@ -626,45 +566,23 @@ class Experiment(nn.Module,
         else:
             latents = None
 
-        if save_all:
-            alphas, As, Bs, Cs = [], [], [], []
-        else:
-            alphas, As, Bs, Cs = None, None, None, None
-
         if get_model_outputs:
             loader = self._get_data_loader(dataset, shuffle=False)
-            loader.dataset.update_smoothing(0)
             rates = []
             for batch_ind, batch in enumerate(loader):
                 loaded_batch = batch.batch.to(self.device)
                 outputs = self.model.forward(loaded_batch,
-                                             generate_mode=True, clamp=False,
-                                             save_all=save_all)
+                                             generate_mode=True, clamp=False)
                 rates.append(outputs[1].mean)
                 if analyze_latents:
                     latents.append(outputs[3])
-                if save_all:
-                    alphas.append(outputs[6])
-                    As.append(outputs[7])
-                    Bs.append(outputs[8])
-                    Cs.append(outputs[9])
 
             rates = torch.cat(rates, 1)
             if analyze_latents:
                 latents = torch.cat(latents, 1)
-            if save_all:
-                alphas = torch.cat(alphas, 1)
-                As = torch.cat(As, 1)
-                Bs = torch.cat(Bs, 1)
-                Cs = torch.cat(Cs, 1)
         else:
             rates = None
 
-        kwargs['alphas'] = alphas
-        kwargs['As'] = As
-        kwargs['Bs'] = Bs
-        kwargs['Cs'] = Cs
-        
         stats_obj = EbbFlowStats(rates, dataset, latents=latents, **kwargs)
         stats = stats_obj.get_stats()
 
@@ -694,10 +612,7 @@ class Experiment(nn.Module,
                 n_val = int(np.round(n_data * val_frac))
                 indices = list(range(n_data))
 
-                if self.data_rng is not None:
-                    self.data_rng.shuffle(indices)
-                else:
-                    self.rng.shuffle(indices)
+                self.rng.shuffle(indices)
                 train_inds = indices[:n_train]
                 val_inds = indices[n_train:n_train + n_val]
                 test_inds = indices[n_train + n_val:]

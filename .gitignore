@@ -1,7 +1,6 @@
 # Ignore model training files, testing stuff
 training_runs/
 checkpoints/
-exploratory/
 *_inputs.pt
 *_data.pkl
 *split_inds.pkl
@@ -22,9 +21,6 @@ neptune_config.yaml
 # Byte-compiled / optimized files
 __pycache__/
 *.py[co]
-
-# Distribution / packaging
-*.egg-info/
 
 # Jupyter
 .ipynb_checkpoints/

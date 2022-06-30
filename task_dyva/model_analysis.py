@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from scipy.stats import pearsonr
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from .utils import get_stimulus_combos
 
@@ -399,40 +397,3 @@ class LatentSeparation():
         stats['normed_centroid_dist'] = centroid_dist / norm_factor
 
         return stats
-
-
-class PlotModelParams():
-    # Plot the dynamics matrices from a trained model
-
-    def __init__(self, expt):
-        self.model = expt.model
-        self.A = self.model.state_dict()['A_mats']
-        self.B = self.model.state_dict()['B_mats']
-        self.C = self.model.state_dict()['C_mats']
-        self.cmap = 'coolwarm'
-
-    def plot_dynamics_matrices(self):
-        B_labels = ['PL', 'PR', 'PU', 'PD', 'ML', 'MR', 'MU', 'MD', 'M', 'P']
-        n_mats = self.A.shape[0]
-
-        fig, axes = plt.subplots(3, n_mats, figsize=(12, 15))
-        for n in range(n_mats):    
-            sns.heatmap(self.A[n, :, :], cmap=self.cmap, center=0, 
-                        vmin=-1, vmax=1, ax=axes[0, n])
-            axes[0, n].set_title('A {0}'.format(n))
-            
-            sns.heatmap(self.B[n, :, :], cmap=self.cmap, center=0, 
-                        vmin=-1, vmax=1, ax=axes[1, n])
-            axes[1, n].set_title('B {0}'.format(n))
-            axes[1, n].set_xticks(np.arange(self.B.shape[2]) + 0.5)
-            axes[1, n].set_xticklabels(B_labels)
-
-            sns.heatmap(self.C[n, :, :], cmap=self.cmap, center=0, 
-                        vmin=-1, vmax=1, ax=axes[2, n])
-            axes[2, n].set_title('C {0}'.format(n))
-
-        fig.tight_layout()
-        plt.show()
-
-        return fig, axes
-

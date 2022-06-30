@@ -41,19 +41,17 @@ class ConfigMixin:
                      'trans_dim', 'prior_dist', 'posterior_dist', 
                      'likelihood_dist', 'likelihood_scale_param',
                      'model_type', 'dynamics_matrix_mult', 
-                     'dynamics_init_method', 'decoder_type',
-                     'alphas_type'}
+                     'dynamics_init_method'}
 
     _training_params = {'num_epochs', 'batch_size', 'train_frac', 'val_frac', 
                         'test_frac', 'optim_alg', 'LR', 'weight_decay', 
                         'clip_grads', 'clip_val', 'n_workers', 'rand_seed', 
                         'learn_prior', 'objective', 'do_amsgrad', 'start_temp',
                         'cool_rate', 'temp_update_every', 'stop_patience', 
-                        'stop_min_epoch', 'stop_delta', 'stop_metric',
-                        'mixed_precision'}
+                        'stop_min_epoch', 'stop_delta', 'stop_metric'}
 
     _data_params = {'input_dim', 'u_dim', 'nth_play_range', 'outlier_method', 
-                    'outlier_thresh', 'keep_every', 'data_rand_seed'}
+                    'outlier_thresh', 'keep_every'}
 
     _transform_splits = {'train', 'val', 'test'}
 
@@ -62,8 +60,7 @@ class ConfigMixin:
                          'data_augmentation_type', 'data_aug_kernel_bandwidth',
                          'aug_rt_sd', 'aug_resample_frac', 'upscale_mult', 
                          'min_trials', 'post_resp_buffer', 'smoothing_type',
-                         'kernel_sd', 'match_accuracy', 'rt_method',
-                         'init_kernel_sd', 'final_kernel_sd', 'kernel_delta_epochs'}
+                         'kernel_sd', 'match_accuracy', 'rt_method'}
 
     _experiment_params = {'split_indices', 'processed_save_dir', 'mode',
                           'do_logging', 'do_early_stopping', 'params_to_load'}

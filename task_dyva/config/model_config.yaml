@@ -10,11 +10,9 @@ model_params:
   encoder_rnn_n_layers: 1
   encoder_combo_hidden_dim: 64
   decoder_hidden_dim: 64
-  decoder_type: 'single_hidden'
   dynamics_matrix_mult: 0.99
   dynamics_init_method: 'custom_rotation'
   trans_dim: 2
-  alphas_type: 'coupled'
   prior_dist: 'Normal'
   posterior_dist: 'Normal'
   likelihood_dist: 'Normal'
@@ -54,6 +52,6 @@ data_params:
   outlier_method: 'mad'
   outlier_thresh: 10
   keep_every: 10
-  train_transform_kwargs: {'step_size': 20, 'duration': 5000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000], 'data_augmentation_type': 'kde', 'data_aug_kernel_bandwidth': 0.25, 'aug_rt_sd': 25, 'aug_resample_frac': 0.75, 'upscale_mult': 10, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'match_accuracy': False, 'rt_method': 'center_of_mass', 'init_kernel_sd': 200, 'final_kernel_sd': 50, 'kernel_delta_epochs': 100}
-  val_transform_kwargs: {'step_size': 20, 'duration': 10000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 15000, 25000, 35000, 45000, 55000], 'data_augmentation_type': None, 'upscale_mult': 1, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'rt_method': 'center_of_mass', 'init_kernel_sd': 200, 'final_kernel_sd': 50, 'kernel_delta_epochs': 100}
-  test_transform_kwargs: {'step_size': 20, 'duration': 10000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 15000, 25000, 35000, 45000, 55000], 'data_augmentation_type': None, 'upscale_mult': 1, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'rt_method': 'center_of_mass', 'init_kernel_sd': 200, 'final_kernel_sd': 50, 'kernel_delta_epochs': 100}
+  train_transform_kwargs: {'step_size': 20, 'duration': 5000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000], 'data_augmentation_type': 'kde', 'data_aug_kernel_bandwidth': 0.25, 'aug_rt_sd': 25, 'aug_resample_frac': 0.75, 'upscale_mult': 10, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'match_accuracy': False, 'rt_method': 'center_of_mass'}
+  val_transform_kwargs: {'step_size': 20, 'duration': 10000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 15000, 25000, 35000, 45000, 55000], 'data_augmentation_type': None, 'upscale_mult': 1, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'rt_method': 'center_of_mass'}
+  test_transform_kwargs: {'step_size': 20, 'duration': 10000, 'noise_type': 'indep', 'noise_sd': 0.1, 'start_times': [5000, 15000, 25000, 35000, 45000, 55000], 'data_augmentation_type': None, 'upscale_mult': 1, 'min_trials': 1, 'post_resp_buffer': 500, 'smoothing_type': 'gaussian', 'kernel_sd': 50, 'rt_method': 'center_of_mass'}

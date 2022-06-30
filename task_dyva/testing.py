@@ -13,12 +13,10 @@ class SetUpTests():
     # Streamline setting up experiments for tests
     rand_seed = 11345
 
-    def __init__(self, test_dir, raw_data_dir, raw_data_fn, 
-                 project_name=None, **expt_kwargs):
+    def __init__(self, test_dir, raw_data_dir, raw_data_fn, **expt_kwargs):
         self.test_dir = test_dir
         self.raw_data_dir = raw_data_dir
         self.raw_data_fn = raw_data_fn
-        self.project_name = project_name
         self.expt_kwargs = expt_kwargs
         random.seed(self.rand_seed)
         np.random.seed(self.rand_seed)
@@ -36,7 +34,6 @@ class SetUpTests():
         processed_dir = os.path.join(self.test_dir, 'processed')
         expt = Experiment(self.test_dir, self.raw_data_dir, self.raw_data_fn, 
                           'testing', device='cpu', processed_dir=processed_dir, 
-                          neptune_proj_name=self.project_name, 
                           **self.expt_kwargs)
         return expt
 
