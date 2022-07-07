@@ -448,6 +448,16 @@ class EbbFlowStats(EbbFlowDataset):
         m_switch_c = self.df['mcorrect'][m_acc_switch_inds]
         stats['u_acc_switch_cost'] = u_stay_c.mean() - u_switch_c.mean()
         stats['m_acc_switch_cost'] = m_stay_c.mean() - m_switch_c.mean()
+
+        # Calculate slightly differently for early stopping metrics: use all trials
+        stay_inds_estop = self.select(**{'is_switch': 0})
+        switch_inds_estop = self.select(**{'is_switch': 1})
+        u_stay_rts_estop = self.df['urt_ms'][stay_inds_estop]
+        m_stay_rts_estop = self.df['mrt_ms'][stay_inds_estop]
+        u_switch_rts_estop = self.df['urt_ms'][switch_inds_estop]
+        m_switch_rts_estop = self.df['mrt_ms'][switch_inds_estop]
+        stats['u_switch_cost_estop'] = u_switch_rts_estop.mean() - u_stay_rts_estop.mean()
+        stats['m_switch_cost_estop'] = m_switch_rts_estop.mean() - m_stay_rts_estop.mean()
         return stats
 
     def congruency_effect(self):
@@ -485,6 +495,16 @@ class EbbFlowStats(EbbFlowDataset):
         m_incon_c = self.df['mcorrect'][acc_incon_inds]
         stats['u_acc_con_effect'] = u_con_c.mean() - u_incon_c.mean()
         stats['m_acc_con_effect'] = m_con_c.mean() - m_incon_c.mean()
+
+        # Calculate slightly differently for early stopping metrics: use all trials
+        con_inds_estop = self.select(**{'is_congruent': 1})
+        incon_inds_estop = self.select(**{'is_congruent': 0})
+        u_con_rts_estop = self.df['urt_ms'][con_inds_estop]
+        m_con_rts_estop = self.df['mrt_ms'][con_inds_estop]
+        u_incon_rts_estop = self.df['urt_ms'][incon_inds_estop]
+        m_incon_rts_estop = self.df['mrt_ms'][incon_inds_estop]
+        stats['u_con_effect_estop'] = u_incon_rts_estop.mean() - u_con_rts_estop.mean()
+        stats['m_con_effect_estop'] = m_incon_rts_estop.mean() - m_con_rts_estop.mean()
         return stats
 
     def get_stats(self):

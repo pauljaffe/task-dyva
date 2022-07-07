@@ -642,10 +642,11 @@ class EarlyStopping:
     delta (int): The score must exceed the best score by this amount
         to count as an improvement in score. 
     stop_metric (str): The metric to monitor for early stopping. 
-        Currently, the only available option is 'switch_con_avg',
-        which measures the discrepancy between user/model switch cost 
-        and user/model congruency effect (see _get_stop_score 
-        for implementation details). 
+        This can be either 'switch_con_avg', which measures the discrepancy 
+        between user/model switch cost and user/model congruency effect,
+        or 'no_switch', which measures how close the model switch cost is to
+        zero (for training models without a switch cost). See _get_stop_score 
+        for implementation details.
     """
 
     def __init__(self, patience, min_epoch, delta, stop_metric):
@@ -673,11 +674,13 @@ class EarlyStopping:
 
     def _get_stop_score(self, metrics):
         if self.stop_metric == 'switch_con_avg':
-            m_sc, u_sc = metrics['m_switch_cost'], metrics['u_switch_cost']
-            m_ce, u_ce = metrics['m_con_effect'], metrics['u_con_effect']
+            m_sc, u_sc = metrics['m_switch_cost_estop'], metrics['u_switch_cost_estop']
+            m_ce, u_ce = metrics['m_con_effect_estop'], metrics['u_con_effect_estop']
             sc_diff = np.abs(m_sc - u_sc) / u_sc
             ce_diff = np.abs(m_ce - u_ce) / u_ce
             return sc_diff + ce_diff
+        elif self.stop_metric == 'no_switch':
+            return np.abs(metrics['m_switch_cost_estop'])
 
 
 def filter_nth_play(data, keep_range):
