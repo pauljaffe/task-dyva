@@ -370,7 +370,8 @@ class LatentSeparation():
         for c in self.combos:
             mv, pt, cue = c
             filt = {'mv_dir': mv, 'point_dir': pt, 'task_cue': cue,
-                    'prev_task_cue': 1 - cue}
+                    'prev_task_cue': 1 - cue, 'mcorrect': 1, 
+                    'm_prev_correct': 1}
             trial_inds = self.expt_stats.select(**filt)
             if cue == 0:
                 c_centroid = self.mv_centroid

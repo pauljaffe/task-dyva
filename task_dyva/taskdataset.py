@@ -438,12 +438,14 @@ class EbbFlowStats(EbbFlowDataset):
         stats['u_switch_cost'] = u_switch_rts.mean() - u_stay_rts.mean()
         stats['m_switch_cost'] = m_switch_rts.mean() - m_stay_rts.mean()
         # accuracy
-        acc_stay_inds = self.select(**{'is_switch': 0})
-        acc_switch_inds = self.select(**{'is_switch': 1})
-        u_stay_c = self.df['ucorrect'][acc_stay_inds]
-        m_stay_c = self.df['mcorrect'][acc_stay_inds]
-        u_switch_c = self.df['ucorrect'][acc_switch_inds]
-        m_switch_c = self.df['mcorrect'][acc_switch_inds]
+        u_acc_stay_inds = self.select(**{'is_switch': 0, 'u_prev_correct': 1})
+        m_acc_stay_inds = self.select(**{'is_switch': 0, 'm_prev_correct': 1})
+        u_acc_switch_inds = self.select(**{'is_switch': 1, 'u_prev_correct': 1})
+        m_acc_switch_inds = self.select(**{'is_switch': 1, 'm_prev_correct': 1})
+        u_stay_c = self.df['ucorrect'][u_acc_stay_inds]
+        m_stay_c = self.df['mcorrect'][m_acc_stay_inds]
+        u_switch_c = self.df['ucorrect'][u_acc_switch_inds]
+        m_switch_c = self.df['mcorrect'][m_acc_switch_inds]
         stats['u_acc_switch_cost'] = u_stay_c.mean() - u_switch_c.mean()
         stats['m_acc_switch_cost'] = m_stay_c.mean() - m_switch_c.mean()
         return stats
@@ -500,8 +502,8 @@ class EbbFlowStats(EbbFlowDataset):
         stats.update(self.congruency_effect())
         stats['u_accuracy'] = self.df['ucorrect'].mean()
         stats['m_accuracy'] = self.df['mcorrect'].mean()
-        urts = self.df['urt_ms']
-        mrts = self.df['mrt_ms']
+        urts = self.df['urt_ms'][self.select(**{'ucorrect': 1})]
+        mrts = self.df['mrt_ms'][self.select(**{'mcorrect': 1})]
         stats['u_mean_rt'] = urts.mean()
         stats['m_mean_rt'] = mrts.mean()
         stats['u_rt_sd'] = urts.std()

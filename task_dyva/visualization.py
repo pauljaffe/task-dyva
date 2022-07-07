@@ -53,30 +53,40 @@ class PlotRTs(EbbFlowStats):
         return plot_df
 
     def _format_all(self):
-        plot_dists = [self.df['urt_ms'], self.df['mrt_ms']]
+        urts = self.df['urt_ms'][self.select(**{'ucorrect': 1})]
+        mrts = self.df['mrt_ms'][self.select(**{'mcorrect': 1})]
+        plot_dists = [urts, mrts]
         m_or_u = ['user', 'model']
         trial_types = ['N/A', 'N/A']
         return self._format_as_df(plot_dists, m_or_u, trial_types)
 
     def _format_by_switch(self):
-        stay_inds = self.select(**{'is_switch': 0})
-        switch_inds = self.select(**{'is_switch': 1})
-        u_stay_rts = self.df['urt_ms'][stay_inds]
-        m_stay_rts = self.df['mrt_ms'][stay_inds]
-        u_switch_rts = self.df['urt_ms'][switch_inds]
-        m_switch_rts = self.df['mrt_ms'][switch_inds]
+        u_stay_inds = self.select(**{'is_switch': 0, 'ucorrect': 1, 
+                                     'u_prev_correct': 1})
+        m_stay_inds = self.select(**{'is_switch': 0, 'mcorrect': 1, 
+                                     'm_prev_correct': 1})
+        u_switch_inds = self.select(**{'is_switch': 1, 'ucorrect': 1, 
+                                       'u_prev_correct': 1})
+        m_switch_inds = self.select(**{'is_switch': 1, 'mcorrect': 1, 
+                                       'm_prev_correct': 1})
+        u_stay_rts = self.df['urt_ms'][u_stay_inds]
+        m_stay_rts = self.df['mrt_ms'][m_stay_inds]
+        u_switch_rts = self.df['urt_ms'][u_switch_inds]
+        m_switch_rts = self.df['mrt_ms'][m_switch_inds]
         plot_dists = [u_stay_rts, u_switch_rts, m_stay_rts, m_switch_rts]
         trial_types = ['Stay', 'Switch', 'Stay', 'Switch']
         m_or_u = ['user', 'user', 'model', 'model']
         return self._format_as_df(plot_dists, m_or_u, trial_types)
 
     def _format_by_congruency(self):
-        con_inds = self.select(**{'is_congruent': 1})
-        incon_inds = self.select(**{'is_congruent': 0})
-        u_con_rts = self.df['urt_ms'][con_inds]
-        m_con_rts = self.df['mrt_ms'][con_inds]
-        u_incon_rts = self.df['urt_ms'][incon_inds]
-        m_incon_rts = self.df['mrt_ms'][incon_inds]
+        u_con_inds = self.select(**{'is_congruent': 1, 'ucorrect': 1})
+        m_con_inds = self.select(**{'is_congruent': 1, 'mcorrect': 1})
+        u_incon_inds = self.select(**{'is_congruent': 0, 'ucorrect': 1})
+        m_incon_inds = self.select(**{'is_congruent': 0, 'mcorrect': 1})
+        u_con_rts = self.df['urt_ms'][u_con_inds]
+        m_con_rts = self.df['mrt_ms'][m_con_inds]
+        u_incon_rts = self.df['urt_ms'][u_incon_inds]
+        m_incon_rts = self.df['mrt_ms'][m_incon_inds]
         plot_dists = [u_con_rts, u_incon_rts, m_con_rts, m_incon_rts]
         trial_types = ['Congruent', 'Incongruent', 'Congruent',
                        'Incongruent']
