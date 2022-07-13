@@ -18,6 +18,7 @@ neptune_config.yaml
 
 # Virtual environment
 .venv/**
+.python-version
 
 # Byte-compiled / optimized files
 __pycache__/
