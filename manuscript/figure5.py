@@ -76,7 +76,7 @@ class Figure5():
         gs = fig.add_gridspec(4, 8, wspace=2)
 
         # Panel A: Accuracy vs. noise summary
-        axA = fig.add_subplot(gs[:, 0:3])
+        axA = fig.add_subplot(gs[:, :3])
         self._make_panel_A(axA)
 
         # Panel B: Delta accuracy heatmap
@@ -92,6 +92,12 @@ class Figure5():
     def _make_panel_A(self, ax):
         cmap = sns.color_palette(self.palette, as_cmap=True)
         N = 25 # number of models
+        yticks = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+        ylims = [0.38, 1.05]
+        xticks = [-0.1]
+        xticks.extend(self.noise_sds)
+        xticklabels = ['Participants']
+        xticklabels.extend(self.noise_sds)
 
         u_means = np.array([])
         sc_plus_means = np.array([])
@@ -101,46 +107,45 @@ class Figure5():
         sc_minus_errors = np.array([])
         
         # Stats
+        u_vals = np.array(self.sc_plus_stats['01']['u_accuracy'])
+        u_mean = np.mean(u_vals)
+        u_error = np.std(u_vals) / np.sqrt(N)
         for n_label, n_sd in zip(self.noise_labels, self.noise_sds):
-            # Note: participant accuracy does not vary across noise levels
-            u_vals = np.array(self.sc_plus_stats[n_label]['u_accuracy'])
             sc_plus_vals = np.array(self.sc_plus_stats[n_label]['m_accuracy'])
             sc_minus_vals = np.array(self.sc_minus_stats[n_label]['m_accuracy'])
-
-            u_means = np.append(u_means, np.mean(u_vals))
             sc_plus_means = np.append(sc_plus_means, np.mean(sc_plus_vals))
             sc_minus_means = np.append(sc_minus_means, np.mean(sc_minus_vals))
-
-            u_errors = np.append(u_errors, np.std(u_vals) / np.sqrt(N))
             sc_plus_errors = np.append(sc_plus_errors, 
                                        np.std(sc_plus_vals) / np.sqrt(N))
             sc_minus_errors = np.append(sc_minus_errors, 
                                         np.std(sc_minus_vals) / np.sqrt(N))
      
         # Plot
-        ax.plot(self.noise_sds, u_means, linestyle='-', color='k', 
-                label='Participants', linewidth=0.5)
+        ax.bar(-0.1, u_mean, yerr=u_error, width=0.05, color='plum',
+               error_kw={'elinewidth': 1})
         ax.plot(self.noise_sds, sc_plus_means, linestyle='-', 
-                color=cmap(0.3), label='sc+ models', linewidth=0.5)    
+                 color=cmap(0.3), label='sc+ models', linewidth=0.5)    
         ax.plot(self.noise_sds, sc_minus_means, linestyle='-', 
-                color=cmap(0.7), label='sc- models', linewidth=0.5)    
-        ax.fill_between(self.noise_sds, u_means - u_errors, u_means + u_errors, 
-                        alpha=0.2, facecolor='k', label=None)
+                 color=cmap(0.7), label='sc- models', linewidth=0.5)    
         ax.fill_between(self.noise_sds, sc_plus_means - sc_plus_errors, 
-                        sc_plus_means + sc_plus_errors, alpha=0.2, 
-                        facecolor=cmap(0.3), label=None)
+                         sc_plus_means + sc_plus_errors, alpha=0.2, 
+                         facecolor=cmap(0.3), label=None)
         ax.fill_between(self.noise_sds, sc_minus_means - sc_minus_errors, 
-                        sc_minus_means + sc_minus_errors, alpha=0.2, 
-                        facecolor=cmap(0.7), label=None)
-          
-        ax.set_xticks(self.noise_sds)
-        ax.set_xticklabels(self.noise_sds)
-        ax.set_yticks([0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-        ax.set_ylabel('Accuracy')
+                         sc_minus_means + sc_minus_errors, alpha=0.2, 
+                         facecolor=cmap(0.7), label=None)
+        ax.plot([0, 0], [0.4, 1.03], 'k--', linewidth=0.5)
+
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels)
+        tick1 = ax.get_xticklabels()[0]
+        tick1.set_rotation(45)
+        ax.set_yticks(yticks)
         ax.legend(title=None)
         ax.get_legend().get_frame().set_linewidth(0.0)  
         ax.legend(framealpha=0)
         ax.set_xlabel('Noise SD')
+        ax.set_ylabel('Accuracy')
+        ax.set_ylim(ylims)
 
     def _make_panel_B(self, ax):
         # Calculate delta accuracy for each model

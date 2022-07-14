@@ -75,7 +75,7 @@ class FigureS8():
         axA = fig.add_subplot(gs[0:3, 0:2]) 
         A_params = {'key': 'switch_cost',
                     'ylabel': 'Switch cost (ms)',
-                    'ylim': [-20, 190]}
+                    'ylim': [-120, 190]}
         self._make_behavior_panel(axA, self.A_stats, A_params)
 
         # Mean RT
