@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from .taskdataset import EbbFlowDataset, EbbFlowStats
 from .utils import custom_collate, median_absolute_dev, ConfigMixin
 from .transforms import AddStimulusNoise, FilterOutliers
+from .logging import NeptuneLogger, TensorBoardLogger
 from . import objectives
 from . import models
 
@@ -48,8 +49,6 @@ class Experiment(nn.Module,
         raw_data_dir. Example: 'user1096.pickle'. 
     expt_name (str): Name of the experiment as it will be logged 
         in Neptune.
-    expt_tags (list, optional): Tags to associate with the model training run
-        in Neptune. 
     config (str, optional): If None, the default config in 
         config/model_config.yaml is used. If a filename is supplied, 
         the file should be located in base_dir. 
@@ -75,23 +74,18 @@ class Experiment(nn.Module,
         model training. If None (default) and training is being resumed, the 
         most recently saved checkpoint epoch will be used. This arg
         is ignored for new training runs. 
-    neptune_proj_name (str, optional): Name of the project as defined by
-        the Neptune logger. 
     **kwargs (optional): Additional key: value mappings which can be passed
         to override the parameters defined in the config file. 
         See ConfigMixin.
     """
 
     def __init__(self, base_dir, raw_data_dir, raw_fn, expt_name, 
-                 expt_tags=None, config=None, device='cuda:0', 
-                 processed_dir=None, pre_transform=None, transform=None, 
-                 pre_transform_params=None, transform_params=None, 
-                 load_epoch=None, neptune_proj_name=None, **kwargs):
+                 config=None, device='cuda:0', processed_dir=None, 
+                 pre_transform=None, transform=None, pre_transform_params=None, 
+                 transform_params=None, load_epoch=None, **kwargs):
         super(Experiment, self).__init__()
         self.base_dir = base_dir
         self.expt_name = expt_name
-        self.neptune_proj_name = neptune_proj_name
-        self.expt_tags = [] if expt_tags is None else expt_tags
         self.device = device
         self.checkpoint_dir = os.path.join(base_dir, 'checkpoints')
         self._load_config(config, **kwargs)
@@ -120,7 +114,9 @@ class Experiment(nn.Module,
         self.update_every = self.config_params['training_params'][
             'temp_update_every']
 
-        self._check_resume_training(load_epoch=load_epoch)
+        checkpoint_path = self._check_for_checkpoints(load_epoch=load_epoch)
+        self._setup_experiment(checkpoint_path)
+        self._setup_logger()
         self._prep_data()
         self._build_model()
         self._build_optimizer()
@@ -142,22 +138,27 @@ class Experiment(nn.Module,
             self.eval()
             with torch.no_grad():
                 train_to_log = {'loss': train_loss.item(), 'NLL': train_NLL.item()}
-                self._log_metrics(train_to_log, 'train', epoch)
+                self.logger.log_metrics(train_to_log, 'train', epoch)
 
                 if epoch % self.keep_every == 0:
                     val_NLL, val_loss = self._batch_train(val_loader, 'val')
                     val_to_log = {'loss': val_loss, 'NLL': val_NLL}
-                    self._log_metrics(val_to_log, 'val', epoch)
+                    self.logger.log_metrics(val_to_log, 'val', epoch)
                     self._save_checkpoint(epoch)
                     val_metrics = self.get_behavior_metrics(self.val_dataset)
-                    self._log_metrics(val_metrics.summary_stats, 'val', 
-                                      epoch, epoch_end=True)
+                    self.logger.log_metrics(val_metrics.summary_stats, 'val', 
+                                            epoch, epoch_end=True, iteration=self.iteration,
+                                            anneal_param=self.anneal_param)
 
                     if self.do_early_stopping:
                         self.early_stopping(val_metrics.summary_stats, epoch)
                         if self.early_stopping.early_stop:
                             print(f'Early stopping at epoch {epoch}')
                             break
+
+        if self.logger_type == 'tensorboard':
+            self.logger.logger.flush()
+            self.logger.logger.close()
 
     def _get_data_loader(self, dataset, shuffle=True):
         n_workers = self.config_params['training_params'].get('n_workers', 0)
@@ -220,107 +221,65 @@ class Experiment(nn.Module,
         # Optionally update config parameters with call to ConfigMixin method
         self.update_params(**kwargs)
 
-    def _check_resume_training(self, load_epoch=None):
-        if self.do_logging:
-            # Check for saved logger and load most recent checkpoint;
-            # create new experiment otherwise. 
-            try:
-                self._reload_logger()
-                self._load_logged_checkpoint(epoch=load_epoch)
-            except FileNotFoundError:
-                self._make_new_experiment()
+    def _check_for_checkpoints(self, load_epoch=None):
+        checkpoint_path = None
+        if self.params_to_load is not None:
+            checkpoint_path = os.path.join(self.base_dir, self.params_to_load)
+        elif load_epoch is not None:
+            fn = f'checkpoint_epoch{load_epoch}.pth'
+            checkpoint_path = os.path.join(self.checkpoint_dir, fn)
         else:
-            if self.params_to_load is None:
-                # Loads parameters from a checkpoint designated by epoch number.
-                # If load_epoch is None, the most recent local checkpoint is
-                # loaded. If no checkpoints are found, a new experiment is
-                # created. 
-                self._load_local_checkpoint(epoch=load_epoch)
-            else:
-                # Loads parameters from a named checkpoint file. 
-                self._load_params_file()
-            try:
+            # Look for previously saved checkpoints
+            checkpoint_fns = glob.glob(
+               f'{self.checkpoint_dir}/checkpoint_epoch*.pth')
+            if len(checkpoint_fns) > 0:
+                checkpoint_fns.sort(key=lambda f: int(re.sub(r'\D', '', f)))
+                checkpoint_path = checkpoint_fns[-1]
+        return checkpoint_path
+
+    def _setup_experiment(self, checkpoint_path):
+        if checkpoint_path is None:
+            # Make new experiment
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
+            self.iteration = 0
+            self.start_epoch = 0
+            self.checkpoint = None
+        else:
+            self.checkpoint = torch.load(checkpoint_path, map_location=self.device)
+            try: 
                 self.iteration = self.checkpoint['iteration']
                 self.start_epoch = self.checkpoint['epoch'] + 1
             except:
                 self.iteration = 0
                 self.start_epoch = 0
 
-    def _reload_logger(self):
-        project_name = self.neptune_proj_name
-        with open(os.path.join(
-                self.base_dir, 'logger_info.pickle'), 'rb') as handle:
-            logger_info = pickle.load(handle)
-        expt_id = logger_info['id']
-        self.logger = neptune.init(project=project_name, run=expt_id)
-
-    def _make_new_experiment(self):
-        os.makedirs(self.checkpoint_dir, exist_ok=True)
-        self.start_epoch = 0
-        self.iteration = 0
-        self.checkpoint = None
-        if self.do_logging:
-            project_name = self.neptune_proj_name
-            self.logger = neptune.init(project=project_name, 
-                                       name=self.expt_name)
-            self.logger['parameters'] = self.config_params
-            self.logger['sys/tags'].add(self.expt_tags)
-            logger_info = self.logger.fetch()['sys']
-            logger_path = os.path.join(self.base_dir, 'logger_info.pickle')
-            with open(logger_path, 'xb') as handle:
-                pickle.dump(logger_info, handle, protocol=4)
-
-    def _load_local_checkpoint(self, epoch=None):
-        if epoch is None:
-            # Find epoch of most recent local checkpoint; if none exists,
-            # create a new experiment.
-            checkpoint_fns = glob.glob(self.checkpoint_dir 
-                                       + 'checkpoint_epoch*.pth')
-            if len(checkpoint_fns) == 0:
-                self._make_new_experiment()
-                return
+    def _setup_logger(self):
+        assert self.logger_type in ['neptune', 'tensorboard'], \
+            "Logging type not supported! Set logger_type to 'neptune' or 'tensorboard'."
+        if self.logger_type == 'neptune':
+            logger_info = None
+            info_path = os.path.join(self.base_dir, 'logger_info.pickle')
+            if os.path.exists(info_path):
+                with open(info_path, 'rb') as handle:
+                    logger_info = pickle.load(handle)
+            self.logger = NeptuneLogger(logger_info, self.neptune_proj_name, self.expt_name, 
+                                        self.config_params, self.expt_tags)
+            if self.logger.is_new:
+                with open(info_path, 'xb') as handle:
+                    pickle.dump(self.logger.info, handle, protocol=4)
             else:
-                checkpoint_fns.sort(key=lambda f: int(re.sub(r'\D', '', f)))
-                self.checkpoint = torch.load(checkpoint_fns[-1], 
-                                             map_location=self.device)
-        else:
-            checkpoint_path = os.path.join(self.checkpoint_dir, 
-                                           f'checkpoint_epoch{epoch}.pth')
-            self.checkpoint = torch.load(checkpoint_path, 
-                                         map_location=self.device)
+                self._update_counters()
+        elif self.logger_type == 'tensorboard':
+            self.logger = TensorBoardLogger(self.expt_name, self.log_save_dir)
 
-    def _load_params_file(self):
-        checkpoint_path = os.path.join(self.base_dir, self.params_to_load)
-        self.checkpoint = torch.load(checkpoint_path, 
-                                     map_location=self.device)
-
-    def _load_logged_checkpoint(self, epoch=None):
-        if epoch is None:
-            # Find epoch of most recent checkpoint
-            epoch = int(self.logger['checkpoint_epoch'].fetch_last())
-        os.makedirs(self.checkpoint_dir, exist_ok=True)
-        dl_path = os.path.join(self.checkpoint_dir, 
-                               f'checkpoint_epoch{epoch}.pth') 
-        self.logger[f'model_checkpoints/epoch{epoch}'].download(dl_path)
-        self._load_local_checkpoint(epoch=epoch)
-        # Update iteration and start_epoch to be one plus the values that
-        # were last logged to Neptune rather than those that were
-        # last saved into a checkpoint (values logged to Neptune
-        # must be strictly increasing). 
-        self.iteration = int(self.logger['iteration'].fetch_last())
-        logged_epochs = self.logger['train_loss'].fetch_values().index
+    def _update_counters(self):
+        # Update iteration and start_epoch to be one plus the values
+        # that were last logged to Neptune rather than those that were
+        # saved into a checkpoint (values logged to Neptune 
+        # must be strictly increasing).
+        self.iteration = int(self.logger.logger['iteration'].fetch_last())
+        logged_epochs = self.logger.logger['train_loss'].fetch_values().index
         self.start_epoch = logged_epochs[-1] + 1
-
-    def _log_metrics(self, metrics, name, epoch, epoch_end=False):
-        if not self.do_logging:
-            return
-
-        for key, val in metrics.items():
-            self.logger[f'{name}_{key}'].log(step=epoch, value=val)
-        if epoch_end:
-            self.logger['iteration'].log(step=epoch, value=self.iteration)
-            self.logger['anneal_param'].log(step=epoch, 
-                                            value=self.anneal_param)
 
     def _save_checkpoint(self, epoch):
         _ = self.plot_generated_sample(epoch, self.val_dataset)
@@ -340,10 +299,10 @@ class Experiment(nn.Module,
                     'stop_counter': save_counter,
                     'stop_best_score': save_score},
                    save_path)
-        if self.do_logging:
+        if self.logger_type == 'neptune':
             # Also save checkpoint to Neptune
-            self.logger['checkpoint_epoch'].log(epoch)
-            self.logger[f'model_checkpoints/epoch{epoch}'].upload(save_path)
+            self.logger.logger['checkpoint_epoch'].log(epoch)
+            self.logger.logger[f'model_checkpoints/epoch{epoch}'].upload(save_path)
 
     def _prep_data(self):
         with open(self.data_path, 'rb') as handle:
@@ -501,9 +460,7 @@ class Experiment(nn.Module,
         trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
                                   resp_ylims=resp_ylims)
 
-        if self.do_logging:
-            assign_key = f'model_outputs/epoch{epoch}'
-            self.logger[assign_key].log(trial_fig)
+        self.logger.log_sample_output(trial_fig, epoch)
         if do_plot:
             plt.show()
         plt.close('all')

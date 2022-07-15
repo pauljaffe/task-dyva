@@ -54,8 +54,8 @@ class TensorBoardLogger(Logger):
     # This is a thin wrapper for SummaryWriter (PyTorch class 
     # for writing info to TensorBoard)
 
-    def __init__(self, expt_name):
-        self.logger = SummaryWriter(f'tensorboard/{expt_name}')
+    def __init__(self, expt_name, log_save_dir):
+        self.logger = SummaryWriter(f'{log_save_dir}/{expt_name}')
 
     def log_metrics(self, metrics, name, epoch, epoch_end=False,
                     iteration=None, anneal_param=None):

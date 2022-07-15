@@ -63,7 +63,8 @@ class ConfigMixin:
                          'kernel_sd', 'match_accuracy', 'rt_method'}
 
     _experiment_params = {'split_indices', 'processed_save_dir', 'mode',
-                          'do_logging', 'do_early_stopping', 'params_to_load'}
+                          'logger_type', 'do_early_stopping', 'params_to_load',
+                          'neptune_proj_name', 'expt_tags', 'log_save_dir'}
 
     def update_params(self, **kwargs):
         # Update params from the config file
@@ -96,9 +97,12 @@ class ConfigMixin:
         self.processed_save_dir = kwargs.get('processed_save_dir', 
                                              'processed')
         self.mode = kwargs.get('mode', 'training')
-        self.do_logging = kwargs.get('do_logging', True)
+        self.logger_type = kwargs.get('logger_type', 'tensorboard')
         self.do_early_stopping = kwargs.get('do_early_stopping', True)
         self.params_to_load = kwargs.get('params_to_load', None)
+        self.neptune_proj_name = kwargs.get('neptune_proj_name', None)
+        self.expt_tags = kwargs.get('expt_tags', [])
+        self.log_save_dir = kwargs.get('log_save_dir', 'tensorboard')
 
 
 def median_absolute_dev(data, median=None):

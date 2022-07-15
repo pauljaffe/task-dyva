@@ -2,13 +2,11 @@
 training_runs/
 checkpoints/
 exploratory/
+tensorboard/
 *_inputs.pt
 *_data.pkl
 *split_inds.pkl
 *logger_info.pickle
-
-# Ignore the Neptune config
-neptune_config.yaml
 
 # Vim
 *.sw[po]
