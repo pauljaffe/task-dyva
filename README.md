@@ -67,20 +67,38 @@ poetry run pytest
 Tracking model training
 ------------
 
-Task-DyVA currently supports two experiment tracking solutions: Neptune and TensorBoard (the default). At each checkpoint epoch (every 10 training epochs by default), both trackers log a variety of model training metrics, model behavior metrics alongside participant behavior metrics, and example model outputs (metrics described below). 
+Task-DyVA currently supports two experiment tracking solutions: Neptune and TensorBoard (the default). To use one or the other, set the Experiment key word argument 'logger\_type' to either 'neptune' or 'tensorboard'. The example model training scripts also provide use cases for both tracking solutions. 
+
+At each checkpoint epoch (every 10 training epochs by default), both trackers log a variety of model training metrics, model behavior metrics alongside participant behavior metrics, and example model outputs (metrics described below). Example model outputs at each checkpoint epoch can be visualized in the images tab for both TensorBoard and Neptune. 
 
 ### Description of logged variables
-We use a shorthand notation to describe the logged variables. The 'val' or 'train' prefix indicates that the metric was evaluated on the validation set or training set, respectively. E.g., '[val/train]\_loss' resolves to either 'val\_loss' or 'train\_loss'. The 'u' or 'm' character in variable names indicates that the metric was evaluated on the participant (a.k.a. user)'s data or the model's outputs, respectively.
+We use a shorthand notation to describe the logged variables. The 'val' or 'train' prefix indicates that the metric was evaluated on the validation set or training set, respectively. E.g., '[val/train]\_loss' resolves to either 'val\_loss' or 'train\_loss'. The 'u' or 'm' character in variable names indicates that the metric was evaluated on the participant (a.k.a. user)'s data or the model's outputs, respectively. See the Methods section "Behavior summary statistics" for details on how these metrics are calculated. 
 
-**[val/train]\_loss:** Loss evaluated on the validation/training dataset. 
-**[val/train]\_NLL:** The negative log-likelihood component of the loss evaluated on the validation/training dataset.
-**val\_[u/m]_mean_rt:** Mean response time (RT) in ms for the participant or model.
-**val\_[u/m]_switch_cost:** Switch cost in ms for the participant or model.
+**[val/train]_loss:** Loss evaluated on the validation/training dataset. <br>
+**[val/train]_NLL:** The negative log-likelihood component of the loss evaluated on the validation/training dataset. <br>
+**val_[u/m]_mean_rt:** Mean response time (RT) in ms for the participant or model. <br>
+**val_[u/m]_switch_cost:** Switch cost in ms for the participant or model. <br>
+**val_[u/m]_switch_cost_estop:** Switch cost in ms for the participant or model, including RTs from incorrect trials (used for the early stopping calculation). <br>
+**val_[u/m]_con_effect:** Congruency effect in ms for the participant or model. <br>
+**val_[u/m]_con_effect_estop:** Congruency effect in ms for the participant or model, including RTs from incorrect trials (used for the early stopping calculation). <br>
+**val_[u/m]_rt_sd:** RT standard deviation in ms for the participant or model. <br>
+**val_[u/m]_accuracy:** Response accuracy for the participant or model. <br>
+**val_[u/m]_acc_switch_cost:** Accuracy switch cost for the participant or model. <br>
+**val_[u/m]_acc_con_effect:** Accuracy congruency effect for the participant or model. <br>
 
 ### TensorBoard
-Model training runs are logged with TensorBoard by default (https://www.tensorflow.org/tensorboard/). We recommend using a shared directory for all training runs, so that the results from different experiments can be compared. This can be done by setting the 'log\_save\_dir' key word argument in Experiment, e.g. /path/to/repo/tensorboard (by default, logging metrics will be saved into the directory 'tensorboard' within the same folder as the model training script). 
+Model training runs are logged locally with TensorBoard by default (https://www.tensorflow.org/tensorboard/). We recommend using a shared directory for all training runs, so that the results from different experiments can be compared. This can be done by setting the 'log\_save\_dir' key word argument in Experiment, e.g. /path/to/repo/tensorboard (by default, experiment metrics will be saved into the directory 'tensorboard' within the same folder as the model training script). 
+
+To examine the training metrics, navigate to the directory above the tensorboard directory (e.g. /path/to/repo in the example above), and run 
+
+```
+poetry run tensorboard --logdir=tensorboard
+```
+
+in a terminal window. Then navigate to http://localhost:6006/ in a web browser. 
 
 ### Neptune
+To track experiments with Neptune (https://neptune.ai/), you will need set the NEPTUNE_API_TOKEN bash environment variable and determine the name of your project as it appears in Neptune (see https://docs.neptune.ai/getting-started/installation for detailed instructions). When setting up a new experiment, set the 'logger_type' key word arg in Experiment to 'neptune', and set the 'neptune_proj_name' kwarg to the name of your project as it appears in Neptune. 
 
 
 Troubleshooting
