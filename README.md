@@ -25,7 +25,7 @@ git clone https://github.com/pauljaffe/task-dyva
 
 4) Download the models, data, and metadata linked above. 
 
-5) Change the paths in make_paper.py to the local copies of the models/data, metadata, and a folder to save the figures. 
+5) Change the paths in make\_paper.py to the local copies of the models/data, metadata, and a folder to save the figures. 
 
 6) Run the script to make the figures and reproduce the analyses from the top-level directory of the task-DyVA repo:
 
@@ -34,7 +34,7 @@ poetry run python3 make_paper.py
 ```
 
 ### Notes 
-1) To rerun only a subset of the analyses, comment out the relevant code in make_paper.py. See the notes at the top of make_paper.py for additional options and info.
+1) To rerun only a subset of the analyses, comment out the relevant code in make\_paper.py. See the notes at the top of make\_paper.py for additional options and info.
 
 2) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
 
@@ -42,14 +42,14 @@ poetry run python3 make_paper.py
 Quick start guide to model training
 ------------
 
-To get started with training new models, do steps 1-4 above, then run the model training test script in examples/check_model_training from the command line:
+To get started with training new models, do steps 1-4 above, then run the model training test script in examples/check\_model\_training from the command line:
 
 ```
 poetry run python3 training_script.py
 ```
 
 ### Notes
-1) This is a toy example and will only run for a few epochs. To train a model with the same parameters as used in the paper, see examples/model_training_example/training_script.py. 
+1) This is a toy example and will only run for a few epochs. To train a model with the same parameters as used in the paper, see examples/model\_training\_example/training\_script.py. 
 
 2) By default, these example scripts use TensorBoard for logging training metrics. See "Tracking model training" below for instructions on how to customize experiment tracking.
 
@@ -70,7 +70,12 @@ Tracking model training
 Task-DyVA currently supports two experiment tracking solutions: Neptune and TensorBoard (the default). At each checkpoint epoch (every 10 training epochs by default), both trackers log a variety of model training metrics, model behavior metrics alongside participant behavior metrics, and example model outputs (metrics described below). 
 
 ### Description of logged variables
-Note: we use a shorthand to describe the logged variables. The 'val' or 'train' prefix indicates that the metric was evaluated on the validation set or training set, respectively. Below, '[val/train]\_loss' resolves to either 'val\_loss' or 'train\_loss'. The 'u' or 'm' character in variables names indicates that the metric was evaluated on the participant (a.k.a. user)'s data or the model's outputs, respectively. 
+We use a shorthand notation to describe the logged variables. The 'val' or 'train' prefix indicates that the metric was evaluated on the validation set or training set, respectively. E.g., '[val/train]\_loss' resolves to either 'val\_loss' or 'train\_loss'. The 'u' or 'm' character in variable names indicates that the metric was evaluated on the participant (a.k.a. user)'s data or the model's outputs, respectively.
+
+**[val/train]\_loss:** Loss evaluated on the validation/training dataset. 
+**[val/train]\_NLL:** The negative log-likelihood component of the loss evaluated on the validation/training dataset.
+**val\_[u/m]_mean_rt:** Mean response time (RT) in ms for the participant or model.
+**val\_[u/m]_switch_cost:** Switch cost in ms for the participant or model.
 
 ### TensorBoard
 Model training runs are logged with TensorBoard by default (https://www.tensorflow.org/tensorboard/). We recommend using a shared directory for all training runs, so that the results from different experiments can be compared. This can be done by setting the 'log\_save\_dir' key word argument in Experiment, e.g. /path/to/repo/tensorboard (by default, logging metrics will be saved into the directory 'tensorboard' within the same folder as the model training script). 
@@ -83,7 +88,7 @@ Troubleshooting
 Here are example training curves from a successful run:
 
 ![image not found](successful_training.png "successful run")
-The x-axis of each plot corresponds to the training epoch. The entire run is shown up until early stopping was triggered. The upper left plot shows the progression of the loss on the validation set over the course of training. The other three plots track the progression of the model's mean RT, switch cost, and congruency effect relative to the participant (see "Tracking model training" below for a description of other variables that are tracked during training). <br> 
+The x-axis of each plot corresponds to the training epoch. The entire run is shown up until early stopping was triggered. The upper left plot shows the progression of the loss on the validation set over the course of training. The other three plots track the progression of the model's mean RT, switch cost, and congruency effect relative to the participant (see "Tracking model training" below for a description of other variables that are tracked during training).
 
 Occasionally, the loss will diverge and training will ultimately fail. This appears to result from instabilities in the latent dynamical system (e.g. exponential growth), rather than exploding gradients (since gradient clipping is used). This can be diagnosed by examining the loss, which exhibits a sudden and dramatic increase (see below). The model's behavioral metrics also typically diverge concurrently. One easy fix is to use a different random seed to initialize training. To do so, simply set the 'rand_seed' key word argument in Experiment (the default seed is 917).
 
