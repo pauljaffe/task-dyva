@@ -5,7 +5,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 class Logger(metaclass=ABCMeta):
-
     @abstractmethod
     def __init__(self, *args):
         pass
@@ -22,7 +21,6 @@ class Logger(metaclass=ABCMeta):
 
 class NeptuneLogger(Logger):
     # This is basically a thin wrapper for Neptune's logger
-
     def __init__(self, logger_info, neptune_project, expt_name,
                  params, tags):
         if logger_info is not None:
@@ -53,7 +51,6 @@ class NeptuneLogger(Logger):
 class TensorBoardLogger(Logger):
     # This is a thin wrapper for SummaryWriter (PyTorch class 
     # for writing info to TensorBoard)
-
     def __init__(self, expt_name, log_save_dir):
         self.logger = SummaryWriter(f'{log_save_dir}/{expt_name}')
 
