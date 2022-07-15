@@ -42,9 +42,8 @@ def test_ebb_flow_dataset(resamp, sm, noise_sd, rt_method, out_method,
     test_p['upscale_mult'] = 1
     test_p['duration'] = 10000
     expt_kwargs = {'outlier_method': out_method, 'outlier_thresh': out_thresh,
-                   'mode': 'full', 'do_logging': False, 
-                   'nth_play_range': [150, 200], 'train': train_p,
-                   'val': val_p, 'test': test_p}
+                   'mode': 'full', 'nth_play_range': [150, 200], 
+                   'train': train_p, 'val': val_p, 'test': test_p}
     splits = ['train', 'val', 'test']
 
     for rdd, rfn, td in zip(raw_data_dirs, raw_data_fns, test_dirs):

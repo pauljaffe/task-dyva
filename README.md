@@ -25,16 +25,17 @@ git clone https://github.com/pauljaffe/task-dyva
 
 4) Download the models, data, and metadata linked above. 
 
-5) Change the paths in make\_paper.py to the local copies of the models/data, metadata, and a folder to save the figures. 
+5) Change the paths in make\_main.py and make\_supplement.py to the local copies of the models/data, metadata, and a folder to save the figures. 
 
-6) Run the script to make the figures and reproduce the analyses from the top-level directory of the task-DyVA repo:
+6) Run the scripts to make the figures and reproduce the analyses from the top-level directory of the task-DyVA repo:
 
 ```
-poetry run python3 make_paper.py
+poetry run python3 make_main.py
+poetry run python3 make_supplement.py
 ```
 
 ### Notes 
-1) To rerun only a subset of the analyses, comment out the relevant code in make\_paper.py. See the notes at the top of make\_paper.py for additional options and info.
+1) To rerun only a subset of the analyses, comment out the relevant code in the make scripts. See the notes at the top of the scripts for additional options and info.
 
 2) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
 

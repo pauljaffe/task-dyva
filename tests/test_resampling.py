@@ -27,8 +27,8 @@ def test_resampling(raw_data_dir=raw_data_dir, raw_data_fn=raw_data_fn,
                'upscale_mult': 5, 'duration': 5000}
 
     expt_kwargs = {'outlier_method': 'mad', 'outlier_thresh': 10,
-                   'mode': 'full', 'do_logging': False, 
-                   'nth_play_range': [150, 200], 'train': tparams}
+                   'mode': 'full', 'nth_play_range': [150, 200], 
+                   'train': tparams}
 
     for rs in resamp_types:
         expt_kwargs['train']['data_augmentation_type'] = rs

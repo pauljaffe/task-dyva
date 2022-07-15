@@ -24,9 +24,8 @@ def test_model(resamp, sm, noise_sd, rt_method, out_method, out_thresh):
                'upscale_mult': 2, 'duration': 5000}
 
     expt_kwargs = {'outlier_method': out_method, 'outlier_thresh': out_thresh,
-                   'mode': 'full', 'do_logging': False, 
-                   'nth_play_range': [150, 200], 'train': tparams,
-                   'val': tparams, 'test': tparams}
+                   'mode': 'full', 'nth_play_range': [150, 200], 
+                   'train': tparams, 'val': tparams, 'test': tparams}
 
     tester = SetUpTests(test_dir, raw_data_dir, raw_data_fn, **expt_kwargs)
     tester.tear_down(test_dir)
