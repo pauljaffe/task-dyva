@@ -22,7 +22,7 @@ from task_dyva import Experiment
 # recommended (toggle by setting the "device" parameter below).
 
 # 3) By default, TensorBoard is used for experiment tracking. Set the
-# 'log_save_dir' key word argument to specify where the logging data will
+# 'log_save_dir' keyword argument to specify where the logging data will
 # be saved. To track the experiment with Neptune, set the 'logger_type'
 # kwarg to 'neptune' and set the 'neptune_proj_name' kwarg to the name
 # of your project as it is stored in Neptune. See the README for more guidance
