@@ -21,26 +21,32 @@ from task_dyva import Experiment
 # 2) While training on CPU is supported, training on GPU is strongly 
 # recommended (toggle by setting the "device" parameter below).
 
-# 3) The settings below assume that the Neptune logger has been 
-# configured (recommended). To train without logging, simply set "do_logging"
-# in "expt_kwargs" to False.
-# Install Neptune: https://docs.neptune.ai/getting-started/installation
+# 3) By default, TensorBoard is used for experiment tracking. Set the
+# 'log_save_dir' key word argument to specify where the logging data will
+# be saved. To track the experiment with Neptune, set the 'logger_type'
+# kwarg to 'neptune' and set the 'neptune_proj_name' kwarg to the name
+# of your project as it is stored in Neptune. See the README for more guidance
+# on how to configure experiment tracking. 
 
 
 # Some finagling to get the paths set
 experiment_dir = os.path.dirname(os.path.abspath(__file__))
-raw_data_dir = '/PATH/TO/DATA'  # change
+raw_data_dir = '/path/to/data'  # change
 raw_data_fn = 'data_pre_split.pickle'
 processed_data_dir = os.path.join(experiment_dir, 'processed_data')
-expt_name = 'name_your_experiment'
-expt_tags = ['add_some_tags']
+expt_name = 'name_your_experiment' # change
 device = 'cpu'  # For GPU, set to e.g. 'cuda:0'
-expt_kwargs = {'do_logging': True}
+expt_kwargs = {'log_save_dir': '/path/to/tensorboard/log/dir'} # change
+
+# To use Neptune, set the following variables:
+#expt_kwargs = {'logger_type': 'neptune',
+#               'neptune_proj_name': '/my/neptune/project', 
+#               'expt_tags': ['tag1', 'tag2']}
 
 # Set up the experiment: this will also process and save the processed data
 expt = Experiment(experiment_dir, raw_data_dir, raw_data_fn, expt_name, 
-                  expt_tags=expt_tags, device=device, 
-                  processed_dir=processed_data_dir, **expt_kwargs)
+                  device=device, processed_dir=processed_data_dir, 
+                  **expt_kwargs)
 
 # Run the training loop
 expt.run_training()

@@ -51,23 +51,25 @@ poetry run python3 training_script.py
 ### Notes
 1) This is a toy example and will only run for a few epochs. To train a model with the same parameters as used in the paper, see examples/model\_training\_example/training\_script.py. 
 
-2) By default, these example scripts use TensorBoard for logging training metrics. See "Tracking model training" below for instructions on how to customize experiment tracking.
+2) By default, these example scripts use TensorBoard for logging training metrics. See "Tracking model training" below for instructions on how to customize experiment tracking. The training script in \examples/check\_model\_training also documents different use cases.
 
-3) While training on CPU is supported, training on GPU is strongly recommended. To toggle training on CPU vs. GPU, set the "device" parameter in the training script.
+3) To resume training a model that was halted or paused, just run the training_script again and training will resume where it left off. 
 
-4) To run the tests, run the following from the command line:
+4) While training on CPU is supported, training on GPU is strongly recommended. To toggle training on CPU vs. GPU, set the "device" parameter in the training script.
+
+5) To run the tests, run the following from the command line:
 
 ```
 poetry run pytest
 ```
 
-5) See the "Troubleshooting" section below for examples of successful and failed training runs. 
+6) See the "Troubleshooting" section below for examples of successful and failed training runs. 
 
 
 Tracking model training
 ------------
 
-Task-DyVA currently supports two experiment tracking solutions: Neptune and TensorBoard (the default). To use one or the other, set the Experiment key word argument 'logger\_type' to either 'neptune' or 'tensorboard'. The example model training scripts also provide use cases for both tracking solutions. 
+Task-DyVA currently supports two experiment tracking solutions: Neptune and TensorBoard (the default). To use one or the other, set the Experiment key word argument 'logger\_type' to either 'neptune' or 'tensorboard'.
 
 At each checkpoint epoch (every 10 training epochs by default), both trackers log a variety of model training metrics, model behavior metrics alongside participant behavior metrics, and example model outputs (metrics described below). Example model outputs at each checkpoint epoch can be visualized in the images tab for both TensorBoard and Neptune. 
 
@@ -85,11 +87,13 @@ We use a shorthand notation to describe the logged variables. The 'val' or 'trai
 **val_[u/m]_accuracy:** Response accuracy for the participant or model. <br>
 **val_[u/m]_acc_switch_cost:** Accuracy switch cost for the participant or model. <br>
 **val_[u/m]_acc_con_effect:** Accuracy congruency effect for the participant or model. <br>
+**anneal_param:** Value of the annealing parameter used in the loss function. <br>
+**iteration:** The number of steps the optimization algorithm has taken.  
 
 ### TensorBoard
 Model training runs are logged locally with TensorBoard by default (https://www.tensorflow.org/tensorboard/). We recommend using a shared directory for all training runs, so that the results from different experiments can be compared. This can be done by setting the 'log\_save\_dir' key word argument in Experiment, e.g. /path/to/repo/tensorboard (by default, experiment metrics will be saved into the directory 'tensorboard' within the same folder as the model training script). 
 
-To examine the training metrics, navigate to the directory above the tensorboard directory (e.g. /path/to/repo in the example above), and run 
+To examine the training metrics, navigate to the directory above the tensorboard directory (e.g. /path/to/repo in the example above) and run 
 
 ```
 poetry run tensorboard --logdir=tensorboard
