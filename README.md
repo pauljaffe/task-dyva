@@ -61,18 +61,30 @@ poetry run python3 training_script.py
 poetry run pytest
 ```
 
-5) Here are example training curves from a successful run:
+5) See the "Troubleshooting" section below for examples of successful and failed training runs. 
 
-![image not found](successful_training.png "successful run")
-
-The x-axis of each plot corresponds to the training epoch. The entire run is shown up until early stopping was triggered. The upper left plot shows the progression of the loss on the validation set over the course of training. The other three plots track the progression of the model's mean RT, switch cost, and congruency effect relative to the participant (see "Tracking model training" below for a description of the variables that are tracked during training). <br> 
-
-Occasionally, the loss will diverge and training will ultimately fail. This appears to result from instabilities in the latent dynamical system (e.g. exponential growth), rather than exploding gradients (since gradient clipping is used). This can be diagnosed by examining the loss, which exhibits a sudden and dramatic increase (see below). The model's behavioral metrics also typically diverge concurrently. One easy fix is to use a different random seed to initialize training. To do so, simply set the 'rand_seed' key word argument in Experiment. 
-
-![image not found](failed_training.png "failed run")
 
 Tracking model training
 ------------
 
-- Describe logged variables
+Task-DyVA currently supports two experiment tracking solutions: Neptune and TensorBoard (the default). At each checkpoint epoch (every 10 training epochs by default), both trackers log a variety of model training metrics, model behavior metrics alongside participant behavior metrics, and example model outputs (metrics described below). 
 
+### Description of logged variables
+Note: we use a shorthand to describe the logged variables. The 'val' or 'train' prefix indicates that the metric was evaluated on the validation set or training set, respectively. Below, '[val/train]\_loss' resolves to either 'val\_loss' or 'train\_loss'. The 'u' or 'm' character in variables names indicates that the metric was evaluated on the participant (a.k.a. user)'s data or the model's outputs, respectively. 
+
+### TensorBoard
+Model training runs are logged with TensorBoard by default (https://www.tensorflow.org/tensorboard/). We recommend using a shared directory for all training runs, so that the results from different experiments can be compared. This can be done by setting the 'log\_save\_dir' key word argument in Experiment, e.g. /path/to/repo/tensorboard (by default, logging metrics will be saved into the directory 'tensorboard' within the same folder as the model training script). 
+
+### Neptune
+
+
+Troubleshooting
+------------
+Here are example training curves from a successful run:
+
+![image not found](successful_training.png "successful run")
+The x-axis of each plot corresponds to the training epoch. The entire run is shown up until early stopping was triggered. The upper left plot shows the progression of the loss on the validation set over the course of training. The other three plots track the progression of the model's mean RT, switch cost, and congruency effect relative to the participant (see "Tracking model training" below for a description of other variables that are tracked during training). <br> 
+
+Occasionally, the loss will diverge and training will ultimately fail. This appears to result from instabilities in the latent dynamical system (e.g. exponential growth), rather than exploding gradients (since gradient clipping is used). This can be diagnosed by examining the loss, which exhibits a sudden and dramatic increase (see below). The model's behavioral metrics also typically diverge concurrently. One easy fix is to use a different random seed to initialize training. To do so, simply set the 'rand_seed' key word argument in Experiment (the default seed is 917).
+
+![image not found](failed_training.png "failed run")
