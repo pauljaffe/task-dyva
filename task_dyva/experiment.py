@@ -27,16 +27,10 @@ from . import models
 
 class Experiment(nn.Module, 
                  ConfigMixin):
-    """Defines methods for customizing model training.
-
-    By default, model training metrics will be logged using Neptune
-    (recommended; see https://neptune.ai/), but this can be disabled 
-    by setting 'do_logging' in kwargs to False. If logging is enabled,
-    neptune_proj_name should be supplied as an argument,
-    and an API token should be established for authentication.
-
-    See https://docs.neptune.ai/getting-started/installation 
-    for detailed instructions. 
+    """Defines methods for customizing model training. See the README
+    for documentation on the various options available for model training
+    and the example training script in /examples/model_training_example
+    for different use cases.
 
     Args
     ----
