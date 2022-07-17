@@ -153,6 +153,8 @@ class Experiment(nn.Module,
         if self.logger_type == 'tensorboard':
             self.logger.logger.flush()
             self.logger.logger.close()
+        elif self.logger_type == 'neptune':
+            self.logger.logger.stop()
 
     def _get_data_loader(self, dataset, shuffle=True):
         n_workers = self.config_params['training_params'].get('n_workers', 0)
