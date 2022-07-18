@@ -6,14 +6,11 @@ import numpy as np
 import pandas as pd
 
 from task_dyva import Experiment
-from task_dyva.model_analysis import FixedPointFinder, LatentsLDA
+from task_dyva.model_analysis import FixedPointFinder, LatentsLDA, LatentSeparation
 
 
 class Preprocess():
-    """Run preprocessing for the manuscript:
-    1) Get the model outputs on the test set at different noise levels.
-    2) Find stable fixed points for each model.
-    3) Run the LDA analyses (Fig. 3).
+    """Run exploratory preprocessing for the manuscript.
     """
 
     analysis_dir = 'model_analysis'
@@ -24,18 +21,20 @@ class Preprocess():
 
     # Noise conditions
     acc_noise_sds = np.arange(0.1, 0.65, 0.05)
+    acc_noise_sds = np.append(acc_noise_sds, [0.7, 0.8, 0.9, 1.0])
     acc_noise_keys = ['01', '015', '02', '025', '03', '035', '04', '045',
-                      '05', '055', '06']
-    sc_noise_sds = np.array([0.7, 0.8, 0.9, 1.0])
-    sc_noise_keys = ['07', '08', '09', '1']
+                      '05', '055', '06', '07', '08', '09', '1']
     primary_noise_key = '01'
     primary_noise_sd = 0.1
     primary_outputs_fn = f'holdout_outputs_{primary_noise_key}SD.pkl'
+    latents_noise_keys = ['01', '05', '1']
+    latents_noise_sds = [0.1, 0.5, 1]
 
     # Behavior summary
     behavior_summary_fn = 'behavior_summary.pkl'
     behavior_metrics = ['accuracy', 'acc_switch_cost', 'acc_con_effect',
-                        'mean_rt', 'switch_cost', 'con_effect']
+                        'mean_rt', 'switch_cost', 'con_effect',
+                        'normed_centroid_dist']
 
     # Fixed point params
     fp_fn = 'fixed_points.pkl'
@@ -47,6 +46,9 @@ class Preprocess():
     lda_fn = 'lda_summary.pkl'
     lda_time_range = [-100, 1600]
     lda_n_shuffle = 100
+
+    # Exploratory params
+    exp_epochs = [0, 10, 30, 50, 100, 200, 300, 400, 500]
 
     def __init__(self, model_dir, metadata, reload_primary_outputs=True,
                  reload_behavior_summary=True, reload_fixed_points=True,
@@ -60,8 +62,14 @@ class Preprocess():
         self.reload_lda_summary = reload_lda_summary
 
     def run_preprocessing(self):
+        switch = False
         for expt_str, model_type in zip(self.expts, 
                                         self.sc_status):
+            # Ugly kluge to resume crashed preprocessing... 
+            if expt_str == 'ages40to49_u2492_expt1':
+                switch = True
+            if not switch:
+                continue
             print(f'Preprocessing experiment {expt_str}')
             this_model_dir = os.path.join(self.model_dir, expt_str)
 
@@ -77,17 +85,81 @@ class Preprocess():
             # LDA analyses
             self._lda_wrapper(this_model_dir, expt_str, model_type)
 
-    def _get_model_outputs(self, model_dir, expt_str, 
+            # Exploratory analyses
+            if model_type == 'sc-':
+                continue
+            else:
+                self._exploratory(this_model_dir, expt_str)
+
+    def _exploratory(self, model_dir, expt_str):
+        # Get model outputs at different stages of training and
+        # at different noise levels
+        for epoch in self.exp_epochs:
+            noise_keys = self.latents_noise_keys.copy()
+            summary = {key: {} for key in noise_keys}
+            for nkey, nsd in zip(self.latents_noise_keys, self.latents_noise_sds): 
+                save_str = f'outputs_epoch{epoch}_{nkey}SD.pkl'
+                expt, expt_stats = self._get_outputs_exp(model_dir, expt_str,
+                                                         save_str, nsd, epoch)
+                latent_sep = LatentSeparation(expt_stats)
+                dist_stats = latent_sep.analyze()
+
+                for metric in self.behavior_metrics:
+                    if metric == 'normed_centroid_dist':
+                        summary[nkey][metric] = dist_stats[metric]
+                    else:
+                        u_key = f'u_{metric}'
+                        m_key = f'm_{metric}'
+                        summary[nkey][u_key] = expt_stats.summary_stats[u_key]
+                        summary[nkey][m_key] = expt_stats.summary_stats[m_key]
+
+                # Delete saved model outputs
+                stats_path = os.path.join(model_dir, self.analysis_dir,
+                                          save_str)
+                os.remove(stats_path)
+
+            # Save
+            this_fn = f'behavior_summary{epoch}.pkl'
+            save_path = os.path.join(model_dir, 
+                                     self.analysis_dir, 
+                                     this_fn)
+            with open(save_path, 'wb') as path:
+                pickle.dump(summary, path, protocol=4)
+
+    def _get_outputs_exp(self, model_dir, expt_str, save_str,
+                         noise_sd, epoch, try_reload=True):
+        noise_params = {'noise_type': 'indep',
+                        'noise_sd': noise_sd}
+        checkpt_fn = f'checkpoint_epoch{epoch}.pth'
+        expt_kwargs = {'logger_type': None,
+                       'test': noise_params,
+                       'mode': 'testing', 
+                       'params_to_load': checkpt_fn}
+
+        # Get model outputs and stats
+        expt = Experiment(model_dir, model_dir, self.raw_fn, 
+                          expt_str, processed_dir=model_dir,
+                          device=self.device, **expt_kwargs)
+
+        expt_stats = expt.get_behavior_metrics(expt.test_dataset, 
+                                               save_fn=save_str,
+                                               save_local=True,
+                                               load_local=try_reload,
+                                               analyze_latents=True,
+                                               stats_dir=self.analysis_dir)
+        return expt, expt_stats
+
+    def _get_model_outputs(self, model_dir, expt_str,
                            noise_key, noise_sd, try_reload=False):
         save_str = f'holdout_outputs_{noise_key}SD.pkl'
         noise_params = {'noise_type': 'indep',
                         'noise_sd': noise_sd}
-        expt_kwargs = {'logger_type': None,
+        expt_kwargs = {'logger_type': None, 
                        'test': noise_params,
                        'mode': 'testing', 
                        'params_to_load': self.params_fn}
 
-        if noise_key == self.primary_noise_key:
+        if noise_key in self.latents_noise_keys:
             analyze_latents = True
         else:
             analyze_latents = False
@@ -107,38 +179,49 @@ class Preprocess():
 
     def _get_behavior_summary(self, model_dir, expt_str, model_type):
         noise_keys = self.acc_noise_keys.copy()
-        if model_type in ['sc+', 'sc-']:
-            noise_cons = np.concatenate((self.acc_noise_sds, 
-                                         self.sc_noise_sds))
-            noise_keys.extend(self.sc_noise_keys)
-        else:
-            noise_cons = self.acc_noise_sds
-
+        noise_cons = self.acc_noise_sds
         summary = {key: {} for key in noise_keys}
         for noise_sd, noise_key in zip(noise_cons, noise_keys):
+            dist_stats = None
             expt, expt_stats = self._get_model_outputs(model_dir, 
                                                        expt_str,
                                                        noise_key, 
                                                        noise_sd,
                                                        try_reload=True)
+
+            if noise_key in self.latents_noise_keys:
+                latent_sep = LatentSeparation(expt_stats)
+                dist_stats = latent_sep.analyze()
+
             for metric in self.behavior_metrics:
-                u_key = f'u_{metric}'
-                m_key = f'm_{metric}'
-                summary[noise_key][u_key] = expt_stats.summary_stats[u_key]
-                summary[noise_key][m_key] = expt_stats.summary_stats[m_key]
+                if metric == 'normed_centroid_dist':
+                    try:
+                        summary[noise_key][metric] = dist_stats[metric]
+                    except:
+                        continue
+                else:
+                    u_key = f'u_{metric}'
+                    m_key = f'm_{metric}'
+                    summary[noise_key][u_key] = expt_stats.summary_stats[u_key]
+                    summary[noise_key][m_key] = expt_stats.summary_stats[m_key]
 
             if model_type in ['sc+', 'sc-']:
                 # Get conditional error rates
                 error_info = self._get_error_info(expt_stats.df)
                 summary[noise_key].update(error_info)
 
-        # Save and remove intermediate files
+            # Delete model outputs
+            if noise_key != self.primary_noise_key:
+                fn = os.path.join(model_dir, self.analysis_dir,
+                                  f'holdout_outputs_{noise_key}SD.pkl')
+                os.remove(fn)
+
+        # Save
         save_path = os.path.join(model_dir, 
                                  self.analysis_dir, 
                                  self.behavior_summary_fn)
         with open(save_path, 'wb') as path:
             pickle.dump(summary, path, protocol=4)
-        self._clean_up_behavior_summary(model_dir, noise_keys)
 
     def _get_error_info(self, df):
         errors = {}
@@ -160,15 +243,6 @@ class Preprocess():
         errors['switch_error_rate'] = n_switch_errors / n_switch
 
         return errors
-
-    def _clean_up_behavior_summary(self, model_dir, noise_keys):
-        for key in noise_keys:
-            if key == self.primary_noise_key:
-                continue
-            else:
-                fn = os.path.join(model_dir, self.analysis_dir,
-                                  f'holdout_outputs_{key}SD.pkl')
-                os.remove(fn)
 
     def _primary_outputs_wrapper(self, model_dir, expt_str):
         primary_stats_path = os.path.join(model_dir,

@@ -250,7 +250,7 @@ class Experiment(nn.Module,
                 self.start_epoch = 0
 
     def _setup_logger(self):
-        assert self.logger_type in ['neptune', 'tensorboard'], \
+        assert self.logger_type in ['neptune', 'tensorboard', None], \
             "Logging type not supported! Set logger_type to 'neptune' or 'tensorboard'."
         if self.logger_type == 'neptune':
             logger_info = None
@@ -267,6 +267,8 @@ class Experiment(nn.Module,
                 self._update_counters()
         elif self.logger_type == 'tensorboard':
             self.logger = TensorBoardLogger(self.expt_name, self.log_save_dir)
+        elif self.logger_type is None:
+            self.logger = None
 
     def _update_counters(self):
         # Update iteration and start_epoch to be one plus the values
