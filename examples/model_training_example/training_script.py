@@ -9,8 +9,8 @@ from task_dyva import Experiment
 # in the paper. Set "raw_data_dir" to specify the location of the gameplay data 
 # to be used for model training. 
 
-# To run the model training, run:
-# poetry run python3 training_script.py
+# To run the model training, activate the task-dyva conda environment and run:
+# >> python training_script.py
 # from the command line.
 
 # Notes

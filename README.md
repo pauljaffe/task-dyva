@@ -19,34 +19,44 @@ The easiest and recommended way to reproduce the results from the paper is as fo
 git clone https://github.com/pauljaffe/task-dyva
 ```
 
-2) Install Poetry to manage the dependencies (see https://python-poetry.org/docs/). After installing, make sure that Poetry's bin directory is in the 'PATH' environment variable by running `source $HOME/.poetry/env` from the command line. 
-
-3) Install the task-DyVA dependencies: Run `poetry install` from the command line within the local task-dyva repo. The complete set of dependencies is listed in pyproject.toml.
-
-4) Download the models, data, and metadata linked above. 
-
-5) Change the paths in make\_main.py and make\_supplement.py to the local copies of the models/data, metadata, and a folder to save the figures. 
-
-6) Run the scripts to make the figures and reproduce the analyses from the top-level directory of the task-DyVA repo:
+2) Install the dependencies listed in the environment.yml file and set up a conda environment. If you haven't already, install conda (or miniconda), then create an environment by running:
 
 ```
-poetry run python3 make_main.py
-poetry run python3 make_supplement.py
+conda env create -f environment.yml
+```
+
+This will create an environment named task-dyva and automatically install all of the required dependencies. Activate the environment by running:
+
+```
+conda activate task-dyva
+``` 
+
+3) Download the models, data, and metadata linked above. 
+
+4) Change the paths in make\_main.py and make\_supplement.py to the local copies of the models/data, metadata, and a folder to save the figures. 
+
+5) Run the scripts to make the figures and reproduce the analyses from the top-level directory of the task-DyVA repo (first ensure that the task-dyva conda environment is active):
+
+```
+python make_main.py
+python make_supplement.py
 ```
 
 ### Notes 
-1) To rerun only a subset of the analyses, comment out the relevant code in the make scripts. See the notes at the top of the scripts for additional options and info.
+1) You may need to add the task-dyva module to PYTHONPATH. An easy way to do this is to add a .pth file with the path to the local task-dyva module to `~/anaconda3/envs/task-dyva/lib/pythonX.X/site-packages/`. See [this post](https://stackoverflow.com/questions/37006114/anaconda-permanently-include-external-packages-like-in-pythonpath) for more detailed instructions. 
 
-2) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
+2) To rerun only a subset of the analyses, comment out the relevant code in the make scripts. See the notes at the top of the scripts for additional options and info.
+
+3) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
 
 
 Quick start guide to model training
 ------------
 
-To get started with training new models, do steps 1-4 above, then run the model training test script in examples/check\_model\_training from the command line:
+To get started with training new models, do steps 1-3 above, then run the model training test script in examples/check\_model\_training from the command line (with the task-dyva conda environment active):
 
 ```
-poetry run python3 training_script.py
+python training_script.py
 ```
 
 ### Notes
@@ -58,11 +68,7 @@ poetry run python3 training_script.py
 
 4) While training on CPU is supported, training on GPU is strongly recommended. To toggle training on CPU vs. GPU, set the "device" parameter in the training script.
 
-5) To run the tests, run the following from the command line:
-
-```
-poetry run pytest
-```
+5) To run the tests, just run `pytest` from the command line.
 
 6) See the "Troubleshooting" section below for examples of successful and failed training runs. 
 
@@ -97,7 +103,7 @@ Model training runs are logged locally with TensorBoard by default (https://www.
 To examine the training metrics, navigate to the directory above the tensorboard directory (e.g. /path/to/repo in the example above) and run 
 
 ```
-poetry run tensorboard --logdir=tensorboard
+tensorboard --logdir=tensorboard
 ```
 
 in a terminal window. Then navigate to http://localhost:6006/ in a web browser. 
