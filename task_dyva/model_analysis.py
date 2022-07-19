@@ -54,7 +54,7 @@ class FixedPointFinder():
                                                                generate_mode=True,
                                                                clamp=True,
                                                                z0_supplied=z0)
-                z_np = z_out.detach().numpy()
+                z_np = z_out.cpu().detach().numpy()
                 c_fps = self._check_for_fps(z_np, N, pt=pt, mv=mv, cue=cue)
                 if c_fps is not None:
                     all_fps.extend(c_fps)

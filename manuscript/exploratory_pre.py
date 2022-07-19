@@ -14,7 +14,7 @@ class Preprocess():
     """
 
     analysis_dir = 'model_analysis'
-    device = 'cpu'
+    device = 'cuda:0'
     raw_fn = 'data_pre_split.pickle'
     params_fn = 'model_params.pth'
     rand_seed = 12345 # Enforce reproducibility
@@ -62,14 +62,8 @@ class Preprocess():
         self.reload_lda_summary = reload_lda_summary
 
     def run_preprocessing(self):
-        switch = False
         for expt_str, model_type in zip(self.expts, 
                                         self.sc_status):
-            # Ugly kluge to resume crashed preprocessing... 
-            if expt_str == 'ages40to49_u2492_expt1':
-                switch = True
-            if not switch:
-                continue
             print(f'Preprocessing experiment {expt_str}')
             this_model_dir = os.path.join(self.model_dir, expt_str)
 
@@ -286,7 +280,8 @@ class Preprocess():
             fpf = FixedPointFinder(expt, expt_stats, fp_path,
                                    fp_summary_path,
                                    load_saved=False,
-                                   rand_seed=self.rand_seed)
+                                   rand_seed=self.rand_seed,
+                                   device=self.device)
             this_fps = fpf.find_fixed_points(self.fp_N, self.fp_T)
             fp_summary = fpf.get_fixed_point_summary(this_fps)
 
