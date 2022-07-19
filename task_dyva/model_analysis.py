@@ -18,7 +18,7 @@ class FixedPointFinder():
     def __init__(self, expt, expt_stats, fp_path, fp_summary_path,
                  load_saved=True, z_dim=16, rand_seed=12345,
                  t_step=20, t_search_win=10000, max_sd_tol=1e-3,
-                 max_dist_tol=1e-3):
+                 max_dist_tol=1e-3, device='cpu'):
         self.expt = expt
         self.expt_stats = expt_stats
         self.fp_path = fp_path
@@ -31,6 +31,7 @@ class FixedPointFinder():
         self.max_dist_tol = max_dist_tol
         self.stimulus_combos = get_stimulus_combos()
         self.rng = np.random.default_rng(rand_seed)
+        self.device = device
 
     def find_fixed_points(self, N, T):
         # N: number of random latent states used to initialize the fixed
@@ -43,11 +44,11 @@ class FixedPointFinder():
         else:
             all_fps = []
             # Randomly sample initial states to find fixed points
-            z0 = self._make_z0(N)
+            z0 = self._make_z0(N).to(self.device)
 
             for c in self.stimulus_combos:
                 mv, pt, cue = c[0], c[1], c[2]
-                c_stimuli = self._make_fp_stimuli(N, T, pt=pt, mv=mv, cue=cue)
+                c_stimuli = self._make_fp_stimuli(N, T, pt=pt, mv=mv, cue=cue).to(self.device)
                 # Generate responses
                 _, _, _, z_out, _, _ = self.expt.model.forward(c_stimuli,
                                                                generate_mode=True,
