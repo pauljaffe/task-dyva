@@ -15,8 +15,7 @@ tensorboard/
 .DS_Store
 
 # Virtual environment
-.venv/**
-.python-version
+env/
 
 # Byte-compiled / optimized files
 __pycache__/
