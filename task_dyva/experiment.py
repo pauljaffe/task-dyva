@@ -156,9 +156,10 @@ class Experiment(nn.Module,
         elif self.logger_type == 'neptune':
             self.logger.logger.stop()
 
-    def _get_data_loader(self, dataset, shuffle=True):
+    def _get_data_loader(self, dataset, shuffle=True, batch_size=None):
         n_workers = self.config_params['training_params'].get('n_workers', 0)
-        batch_size = self.config_params['training_params']['batch_size']
+        if batch_size is None:
+            batch_size = self.config_params['training_params']['batch_size']
         if torch.cuda.is_available():
             n_gpus = torch.cuda.device_count()
             n_workers = int(n_workers * n_gpus)
@@ -480,7 +481,7 @@ class Experiment(nn.Module,
     def get_behavior_metrics(self, dataset, save_fn=None, save_local=False, 
                              load_local=False, analyze_latents=False,
                              get_model_outputs=True, stats_dir=None,
-                             **kwargs):
+                             batch_size=None, **kwargs):
         """Get behavioral stats for user and model from the supplied dataset.
 
         Args
@@ -522,7 +523,8 @@ class Experiment(nn.Module,
             latents = None
 
         if get_model_outputs:
-            loader = self._get_data_loader(dataset, shuffle=False)
+            loader = self._get_data_loader(dataset, shuffle=False, 
+                                           batch_size=batch_size)
             rates = []
             for batch_ind, batch in enumerate(loader):
                 loaded_batch = batch.batch.to(self.device)
