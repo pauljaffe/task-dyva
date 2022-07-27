@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon
 
 from task_dyva.visualization import BarPlot
-from task_dyva.utils import save_figure
+from task_dyva.utils import save_figure, pearson_bootstrap
 
 
 class Figure5():
@@ -19,29 +19,33 @@ class Figure5():
     """
 
     analysis_dir = 'model_analysis'
-    stats_fn = 'behavior_summary.pkl'
-    behavior_keys = ['m_accuracy', 'u_accuracy', 'con_error_rate',
-                     'incon_error_rate', 'stay_error_rate', 
-                     'switch_error_rate']
+    stats_fn = 'summary.pkl'
+    behavior_keys = ['m_accuracy', 'u_accuracy', 'u_con_effect']
     noise_labels = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '1']
     noise_sds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    noise_5C = '05' # 0.5SD noise analyzed in panel 5C
-    figsize = (7.5, 1.5)
+    noise_5C = '1' # 1SD noise analyzed in panel 5C
+    figsize = (7.5, 1.1)
     figdpi = 300
     palette = 'viridis'
     heatmap_palette = sns.diverging_palette(260, 10, l=50, s=100, as_cmap=True)
 
-    def __init__(self, model_dir, save_dir, metadata):
+    def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']
+        self.rng = np.random.default_rng(rand_seed)
+        self.n_boot = n_boot
+        self.alpha = 0.05
 
         # Containers for summary stats
         stat_dict = {k: [] for k in self.behavior_keys}
         self.sc_minus_stats = {n: copy.deepcopy(stat_dict) 
                                for n in self.noise_labels}
         self.sc_plus_stats = copy.deepcopy(self.sc_minus_stats)
+        diff_dict = {'acc_diff': [], 'u_con_effect': []}
+        self.acc_diff_stats = {n: copy.deepcopy(diff_dict)
+                               for n in self.noise_labels}
 
     def make_figure(self):
         print('Making Figure 5...')
@@ -56,24 +60,30 @@ class Figure5():
         for expt_str, sc in zip(self.expts, 
                                 self.sc_status):
 
-            if sc in ['sc+', 'sc-']:
-                stats_path = os.path.join(self.model_dir, expt_str, 
-                                          self.analysis_dir, self.stats_fn)
-                with open(stats_path, 'rb') as path:
-                    this_stats = pickle.load(path)
+            stats_path = os.path.join(self.model_dir, expt_str, 
+                                      self.analysis_dir, self.stats_fn)
+            with open(stats_path, 'rb') as path:
+                this_stats = pickle.load(path)
 
-                for n in self.noise_labels:
-                    for key in self.behavior_keys:
-                        stat = this_stats[n][key]
-                        if sc == 'sc+':
-                            self.sc_plus_stats[n][key].append(stat)
-                        elif sc == 'sc-':
-                            self.sc_minus_stats[n][key].append(stat)
+            for n in self.noise_labels:
+                if n == '01':
+                    acc_01 = this_stats[n]['m_accuracy']
+                acc_diff = acc_01 - this_stats[n]['m_accuracy']
+                if sc != 'sc-':
+                    self.acc_diff_stats[n]['acc_diff'].append(acc_diff)
+                    self.acc_diff_stats[n]['u_con_effect'].append(
+                        this_stats[n]['u_con_effect'])
+                for key in self.behavior_keys:
+                    stat = this_stats[n][key]
+                    if sc == 'sc+':
+                        self.sc_plus_stats[n][key].append(stat)
+                    elif sc == 'sc-':
+                        self.sc_minus_stats[n][key].append(stat)
 
     def _plot_figure_get_stats(self):
         fig = plt.figure(constrained_layout=False, figsize=self.figsize, 
                          dpi=self.figdpi)
-        gs = fig.add_gridspec(4, 8, wspace=2)
+        gs = fig.add_gridspec(4, 9, wspace=2)
 
         # Panel A: Accuracy vs. noise summary
         axA = fig.add_subplot(gs[:, :3])
@@ -83,8 +93,8 @@ class Figure5():
         axB = fig.add_subplot(gs[:, 3:6])
         self._make_panel_B(axB)
 
-        # Panel C: Error rate by trial type
-        axC = fig.add_subplot(gs[:, 6:])
+        # Panel C: Model robustness to noise vs. congruency effect
+        axC = fig.add_subplot(gs[:, 6:8])
         self._make_panel_C(axC)
 
         return fig
@@ -110,6 +120,7 @@ class Figure5():
         u_vals = np.array(self.sc_plus_stats['01']['u_accuracy'])
         u_mean = np.mean(u_vals)
         u_error = np.std(u_vals) / np.sqrt(N)
+        print('Panel A stats:')
         for n_label, n_sd in zip(self.noise_labels, self.noise_sds):
             sc_plus_vals = np.array(self.sc_plus_stats[n_label]['m_accuracy'])
             sc_minus_vals = np.array(self.sc_minus_stats[n_label]['m_accuracy'])
@@ -119,6 +130,8 @@ class Figure5():
                                        np.std(sc_plus_vals) / np.sqrt(N))
             sc_minus_errors = np.append(sc_minus_errors, 
                                         np.std(sc_minus_vals) / np.sqrt(N))
+            wstat, p = wilcoxon(sc_plus_vals, sc_minus_vals, mode='approx')
+            print(f'Sign-rank test at {n_sd}SD noise: w = {wstat}, p = {p}')
      
         # Plot
         ax.bar(-0.1, u_mean, yerr=u_error, width=0.05, color='plum',
@@ -146,6 +159,7 @@ class Figure5():
         ax.set_xlabel('Noise SD')
         ax.set_ylabel('Accuracy')
         ax.set_ylim(ylims)
+        print('------------------------------')
 
     def _make_panel_B(self, ax):
         # Calculate delta accuracy for each model
@@ -172,36 +186,47 @@ class Figure5():
         ax.set_xlabel('Noise SD')
 
     def _make_panel_C(self, ax):
-        print('Panel C stats: sc+ vs. sc- error rates, signed-rank test:')
-        keys = ['con_error_rate', 'incon_error_rate', 'stay_error_rate', 
-                'switch_error_rate']
-        df_keys = ['Congruent', 'Incongruent', 'Stay', 'Switch']
+        plot_noise = '1'
+        plot_noise_label = '1'
+        line_ext = 0
 
-        # Reformat as data frame, print stats
-        all_dfs = []
-        for key, df_key in zip(keys, df_keys):
-            plus_data = self.sc_plus_stats[self.noise_5C][key]
-            minus_data = self.sc_minus_stats[self.noise_5C][key]
-            plus_df = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc+',
-                                    'p_error': plus_data})
-            minus_df = pd.DataFrame({'trial_type': df_key, 'model_type': 'sc-',
-                                     'p_error': minus_data})
-            all_dfs.append(plus_df)
-            all_dfs.append(minus_df)
+        print('Stats for panel C:')
+        xlab = 'Participant congruency effect (ms)'
+        ylab = f'Model robustness to noise'
+        x = self.acc_diff_stats[plot_noise]['u_con_effect']
+        y = self.acc_diff_stats[plot_noise]['acc_diff']
+        _ = plot_scatter2(x, y, ax, line_ext, xlab, ylab, self.rng,
+                          n_boot=self.n_boot, alpha=self.alpha,
+                          text_x=0.65, text_y=0.15)
+        ax.set_xticks([0, 50, 100, 150, 200, 250])
 
-            _, p = wilcoxon(plus_data, y=minus_data, mode='approx')
-            print(f'{df_key} error rate: p = {p}')
-            print(f'sc+ mean: {np.mean(plus_data)}; sc- mean: {np.mean(minus_data)}')
-        print('----------------------------')
-        df = pd.concat(all_dfs)
 
-        # Plot
-        params = {'ylim': [0, 0.45],
-                  'ylabel': 'Error rate',
-                  'xticklabels': df_keys,
-                  'plot_legend': True,
-                  'elinewidth': 0.5}
-        error_type = 'sem'
-        bar = BarPlot(df)
-        _ = bar.plot_grouped_bar('trial_type', 'p_error', 'model_type',
-                                 error_type, ax, **params)
+def plot_scatter2(d1, d2, ax, line_ext, xlabel, ylabel, rng,
+                  n_boot=1000, alpha=0.05,
+                  plot_unity=False, text_x=0.05, text_y=0.95):
+    # Plot best fit line
+    plot_x = np.array([min(d1) - line_ext, 
+                       max(d1) + line_ext])
+    m, b = np.polyfit(d1, d2, 1)
+    ax.plot(plot_x, m * plot_x + b, 'r--', zorder=1, linewidth=0.5)
+
+    # Plot unity line
+    if plot_unity:
+        ax.plot(plot_x, plot_x, 'k-', zorder=1, linewidth=0.5)
+    
+    # Plot all individuals
+    ax.scatter(d1, d2, s=0.5, marker='o', zorder=2, alpha=0.8)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    # Stats
+    r, p, ci_lo, ci_hi = pearson_bootstrap(d1, d2, rng,
+                                           n_boot=n_boot,
+                                           alpha=alpha)
+    p_str = '{:0.2e}'.format(p)
+    tstr = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)})\np = {p_str}'
+    #ax.text(text_x, text_y, tstr, transform=ax.transAxes, fontsize=10,
+    #        verticalalignment='top')
+    print(tstr)
+
+    return r
