@@ -150,6 +150,22 @@ class BarPlot():
         ax = self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
         return ax
 
+    def alt_plot_bar(self, group_var, group_vals, y_var, error_type, ax, **kwargs):
+        assert error_type in self.supported_error, \
+           'error_type must be one of the following: ' \
+           f'{self.supported_error}'
+        width = kwargs.get('width', 0.75)
+        plot_data = [self.df.query(f'{group_var} == @gv')[y_var].values 
+                     for gv in group_vals]
+        colors = sns.color_palette(palette=self.palette, n_colors=len(plot_data))
+        for di, d in enumerate(plot_data):
+            d_mean = np.mean(d)
+            d_sem = np.std(d) / np.sqrt(len(d))
+            ax.bar(di, d_mean, yerr=d_sem, width=width, error_kw={'elinewidth': 0.5},
+                   **{'fc': colors[di]})
+        ax = self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
+        return ax, plot_data
+
     def _get_group_data(self, group_df, x, y, error_type):
         means = group_df.groupby(x)[y].mean().to_numpy()
         if error_type == 'sem':

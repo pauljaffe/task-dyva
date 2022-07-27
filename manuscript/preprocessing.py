@@ -21,7 +21,6 @@ class Preprocess():
     device = 'cpu'
     raw_fn = 'data_pre_split.pickle'
     params_fn = 'model_params.pth'
-    rand_seed = 12345 # Enforce reproducibility
 
     # Noise conditions
     all_noise_sds = np.arange(0.1, 0.65, 0.05)
@@ -50,7 +49,7 @@ class Preprocess():
     lda_time_range = [-100, 1600]
     lda_n_shuffle = 100
 
-    def __init__(self, model_dir, metadata, batch_size=None):
+    def __init__(self, model_dir, metadata, rand_seed, batch_size=None):
         self.model_dir = model_dir
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']

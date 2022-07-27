@@ -249,56 +249,36 @@ def get_stimulus_combos():
     return combos
 
 
-def corr_ci(x, y, alpha=0.05):
-    # Calculate confidence intervals for Pearson's r
-    x, y = np.array(x), np.array(y)
-    r, p = pearsonr(x, y)
-    r_z = np.arctanh(r)
-    se = 1 / np.sqrt(x.size - 3)
-    z = norm.ppf(1 - alpha / 2)
-    z_lo, z_hi = r_z - z * se, r_z + z * se
-    ci_lo, ci_hi = np.tanh((z_lo, z_hi))
-    return r, p, ci_lo, ci_hi
-
-
-def pearson_stats(x, y, rng, n_perm=10000, alpha=0.05):
-    # Permutation test for Pearson's r
-    # Computes two-sided p-values and CIs for a shuffle null model
-    x, y = np.array(x), np.array(y)
-    r_true, _ = pearsonr(x, y)
-
-    # Permutation test
-    all_r = np.zeros(n_perm)
-    for n in range(n_perm):
-        this_x = rng.permutation(x)
-        this_r, _ = pearsonr(this_x, y)
-        all_r[n] = this_r
-    r_sort = np.sort(all_r)
-    larger_vals = np.asarray(np.abs(r_sort) >= np.abs(r_true)).nonzero()
-    p = (1 / n_perm) * np.size(larger_vals)
-    ci_ind = int(n_perm * alpha / 2)
-    null_lo, null_hi = r_sort[ci_ind], r_sort[-(ci_ind + 1)]
-    null_median= np.median(r_sort)
-
-    # Boostrap CIs
-    ci_lo, ci_hi = pearson_bootstrap(x, y, rng, n_boot=n_perm, alpha=alpha)
-    stats = {'r': r_true, 'p': p, 'ci': [ci_lo, ci_hi],
-             'r_null': null_median, 'ci_null': [null_lo, null_hi]}
-    return stats
-
-
 def pearson_bootstrap(x, y, rng, n_boot=1000, alpha=0.05):
     # Calculate bootstrapped CIs for Pearson's r
     x, y = np.array(x), np.array(y)
-    r_true, _ = pearsonr(x, y)
+    r_true, p = pearsonr(x, y)
     r_boot = np.zeros(n_boot)
     for n in range(n_boot):
-        inds = rng.choice(np.size(x), n_boot)
+        inds = rng.choice(np.size(x), np.size(x))
         x_boot, y_boot = x[inds], y[inds]
         this_r, _ = pearsonr(x_boot, y_boot)
         r_boot[n] = this_r
     r_boot = np.sort(r_boot)
     ci_ind = int(n_boot * alpha / 2)
     ci_lo, ci_hi = r_boot[ci_ind], r_boot[(-ci_ind + 1)]
-    return ci_lo, ci_hi
+    return r_true, p, ci_lo, ci_hi
 
+
+def pj_bootstrap(x, rng, n_boot=1000, alpha=0.05,
+                 ci_for_plot=False):
+    # Calculate bootstrap CIs for the mean of the data in x
+    # if ci_for_plot, CIs are returned as the widths of the error bars
+    m_true = np.mean(x)
+    m_boot = np.zeros(n_boot)
+    for n in range(n_boot):
+        inds = rng.choice(np.size(x), np.size(x))
+        x_boot = x[inds]
+        m_boot[n] = np.mean(x_boot)
+    m_boot = np.sort(m_boot)
+    ci_ind = int(n_boot * alpha / 2)
+    ci_lo, ci_hi = m_boot[ci_ind], m_boot[(-ci_ind + 1)]
+    if ci_for_plot:
+        ci_lo = m_true - ci_lo
+        ci_hi = ci_hi - m_true
+    return m_true, ci_lo, ci_hi
