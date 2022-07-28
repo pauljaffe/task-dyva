@@ -23,7 +23,7 @@ import seaborn as sns
 from scipy.stats import gaussian_kde, bernoulli
 
 from . import transforms as T
-from .utils import z_pca
+from .utils import z_pca, exgauss_mme
 
 
 class EbbFlowDataset(Dataset):
@@ -57,7 +57,8 @@ class EbbFlowDataset(Dataset):
         with the same length as transform.
     """
 
-    needs_data_augmentation = ('kde', 'kde_no_switch_cost', 'adaptive_gaussian')
+    needs_data_augmentation = ('kde', 'kde_no_switch_cost', 'adaptive_gaussian',
+                               'ex_gauss')
 
     def __init__(self, experiment_dir, params, preprocessed, split,
                  processed_dir, pre_transform=None, transform=None,
@@ -260,6 +261,8 @@ class EbbFlowDataset(Dataset):
             # Smoothing info
             if self.params['smoothing_type'] == 'adaptive_gaussian':
                 this_sm = np.std(this_rts)
+            elif self.params['smoothing_type'] == 'ex_gauss':
+                this_sm = exgauss_mme(this_rts)
             elif self.params['smoothing_type'] == 'kde':
                 bw = self.params.get('data_aug_kernel_bandwidth', 0.25)
                 this_sm = gaussian_kde(this_rts, bw_method=bw)
@@ -1020,6 +1023,10 @@ class EbbFlowGameData():
                 this_mrts = [rt for rt, rdir in zip(self.discrete['mrt_abs'],
                                                     self.discrete['mrespdir'])
                              if rdir == d]
+                #this_mrts = [20*(rt+on) for rt, on, rdir in zip(self.discrete['urt_samples'],
+                #                                    self.discrete['onset'],
+                #                                    self.discrete['urespdir'])
+                #             if rdir == d]
 
                 sns.scatterplot(x=x_plot[this_mrts], 
                                 y=rates[this_mrts, d], s=15, 

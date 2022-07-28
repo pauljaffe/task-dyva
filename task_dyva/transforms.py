@@ -56,15 +56,20 @@ class SmoothResponses():
             kernels_unnorm = [np.exp(-0.5 * ((t - m) / std_devs[k]) ** 2)
                               for k in range(4)]
             kernel = [k / np.amax(k) for k in kernels_unnorm]
+        elif params['smoothing_type'] == 'ex_gauss':
+            kernel = self._norm_and_shift(params['params'], t)
         elif params['smoothing_type'] == 'kde':
-            dists = params['params']
-            pdfs = [dists[k].pdf(t) for k in range(4)]
-            pdfs_norm = [p / sum(p) for p in pdfs]
-            means = [np.dot(pn, t) for pn in pdfs_norm]
-            shifts = [self.kernel_t_max / 2 - m for m in means]
-            kernel = [dists[k].pdf(t - s) / np.amax(dists[k].pdf(t - s))
-                      for k, s in zip(range(4), shifts)]
+            kernel = self._norm_and_shift(params['params'], t)
         self.kernel = kernel
+
+    def _norm_and_shift(self, dists, t):
+        pdfs = [dists[k].pdf(t) for k in range(4)]
+        pdfs_norm = [p / sum(p) for p in pdfs]
+        means = [np.dot(pn, t) for pn in pdfs_norm]
+        shifts = [self.kernel_t_max / 2 - m for m in means]
+        kernel = [dists[k].pdf(t - s) / np.amax(dists[k].pdf(t - s))
+                  for k, s in zip(range(4), shifts)]
+        return kernel
 
     def __call__(self, data):
         """Smooth the responses of a single game.
