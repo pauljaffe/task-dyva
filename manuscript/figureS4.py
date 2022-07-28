@@ -23,12 +23,15 @@ class FigureS4():
     age_bin_labels = ['20-29', '30-39', '40-49', '50-59', 
                       '60-69', '70-79', '80-89']
 
-    def __init__(self, model_dir, save_dir, metadata):
+    def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.age_bins = metadata['age_range']
         self.sc_status = metadata['switch_cost_type']
+        self.rng = np.random.default_rng(rand_seed)
+        self.n_boot = n_boot
+        self.alpha = 0.05
 
         # Containers for summary stats
         self.group_stats = {'u_rt_sd': [], 'm_rt_sd': []}
@@ -72,7 +75,8 @@ class FigureS4():
         A_params = {'ax_lims': [20, 350],
                     'metric': 'rt_sd',
                     'label': 'RT SD (ms)'}
-        plot_scatter(self.group_stats, A_params, axes[0], self.line_ext)
+        plot_scatter(self.group_stats, A_params, axes[0], self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         # Panel B: Model vs. participant RT SD binned by age
         error_type = 'sem'

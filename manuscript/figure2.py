@@ -32,13 +32,16 @@ class Figure2():
                     734: 'C1',
                     910: 'C2'}
 
-    def __init__(self, model_dir, save_dir, metadata):
+    def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.age_bins = metadata['age_range']
         self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
+        self.rng = np.random.default_rng(rand_seed)
+        self.n_boot = n_boot
+        self.alpha = 0.05
 
         # Containers for summary stats
         self.group_stats = {'m_switch_cost': [], 'u_switch_cost': [],
@@ -114,21 +117,24 @@ class Figure2():
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
         D_ax = fig.add_subplot(gs[8:15, 0:7])
-        plot_scatter(self.group_stats, D_params, D_ax, self.line_ext)
+        plot_scatter(self.group_stats, D_params, D_ax, self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         # Panel E: Switch cost
         E_params = {'ax_lims': [-25, 300],
                     'metric': 'switch_cost',
                     'label': 'switch cost (ms)'}
         E_ax = fig.add_subplot(gs[8:15, 9:16])
-        plot_scatter(self.group_stats, E_params, E_ax, self.line_ext)
+        plot_scatter(self.group_stats, E_params, E_ax, self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
         
         # Panel F: Congruency effect
         F_params = {'ax_lims': [0, 300],
                     'metric': 'con_effect',
                     'label': 'congruency effect (ms)'}
         F_ax = fig.add_subplot(gs[8:15, 18:25])
-        plot_scatter(self.group_stats, F_params, F_ax, self.line_ext)
+        plot_scatter(self.group_stats, F_params, F_ax, self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         #################################################
         # Panels G-I: Model vs. participant binned by age

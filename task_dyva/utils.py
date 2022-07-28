@@ -185,7 +185,8 @@ def save_figure(fig, save_dir, fn, save_svg=True, save_png=True):
         fig.savefig(png_path, bbox_inches='tight')
 
 
-def plot_scatter(group_stats, params, ax, line_ext):
+def plot_scatter(group_stats, params, ax, line_ext,
+                 rng, n_boot=1000, alpha=0.05):
     # Model vs. user scatter plotting utility
     metric = params['metric']
     u_key = f'u_{metric}'
@@ -210,13 +211,18 @@ def plot_scatter(group_stats, params, ax, line_ext):
     ax.set_ylim(params['ax_lims'])
 
     # Stats
-    r = pearsonr(u_vals, m_vals)
+    r, p, ci_lo, ci_hi = pearson_bootstrap(u_vals, m_vals, rng,
+                                           n_boot=n_boot,
+                                           alpha=alpha)
     u_mean = np.mean(u_vals)
     m_mean = np.mean(m_vals)
     u_sem = np.std(u_vals) / np.sqrt(len(u_vals))
     m_sem = np.std(m_vals) / np.sqrt(len(m_vals))
-    print(f'{metric} corr. coeff.: {r[0]}, p = {r[1]}')
-    print(f'{metric} slope: {m}; intercept: {b}') 
+    print(f'{metric} stats:')
+    p_str = '{:0.2e}'.format(p)
+    tstr = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)}), p = {p_str}'
+    print(tstr)
+    print(f'Best-fit slope: {m}; intercept: {b}') 
     print(f'Participant {metric} mean +/- s.e.m.: {u_mean} +/- {u_sem}')
     print(f'Model {metric} mean +/- s.e.m.: {m_mean} +/- {m_sem}')
     print('--------------------------------------------------------')

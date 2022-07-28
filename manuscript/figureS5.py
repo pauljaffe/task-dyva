@@ -15,17 +15,20 @@ class FigureS5():
     """
 
     analysis_dir = 'model_analysis'
-    stats_fn = 'behavior_summary.pkl'
+    stats_fn = 'summary.pkl'
     noise_key = '04'
     figsize = (7, 2.1)
     figdpi = 300
     line_ext = 10
 
-    def __init__(self, model_dir, save_dir, metadata):
+    def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']
+        self.rng = np.random.default_rng(rand_seed)
+        self.n_boot = n_boot
+        self.alpha = 0.05
 
         # Containers for summary stats
         self.group_stats = {'m_switch_cost': [], 'u_switch_cost': [],
@@ -64,19 +67,22 @@ class FigureS5():
         A_params = {'ax_lims': [600, 1250],
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
-        plot_scatter(self.group_stats, A_params, axes[0], self.line_ext)
+        plot_scatter(self.group_stats, A_params, axes[0], self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         # Panel B: Switch cost scatter
         B_params = {'ax_lims': [-25, 350],
                     'metric': 'switch_cost',
                     'label': 'switch cost (ms)'}
-        plot_scatter(self.group_stats, B_params, axes[1], self.line_ext)
+        plot_scatter(self.group_stats, B_params, axes[1], self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         # Panel C: Congruency effect scatter
         C_params = {'ax_lims': [-15, 275],
                     'metric': 'con_effect',
                     'label': 'congruency effect (ms)'}
-        plot_scatter(self.group_stats, C_params, axes[2], self.line_ext)
+        plot_scatter(self.group_stats, C_params, axes[2], self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         plt.tight_layout()
 

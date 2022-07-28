@@ -141,7 +141,10 @@ class FigureS7():
             r_vals.append(r)
             cis[0, ind] = r - ci_lo
             cis[1, ind] = ci_hi - r
-            print(f"Pearson's r at noise = {sd}SD: r = {r}, p = {p}")
+            print(f"Pearon's r stats at noise = {sd}SD:")
+            p_str = '{:0.2e}'.format(p)
+            tstr = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)}), p = {p_str}'
+            print(tstr)
 
         ax.errorbar(self.noise_sds, r_vals, yerr=cis, linestyle='-',
                     linewidth=0.5)

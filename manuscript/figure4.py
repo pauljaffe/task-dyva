@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import wilcoxon, pearsonr
+from scipy.stats import wilcoxon
 
-from task_dyva.utils import save_figure
+from task_dyva.utils import save_figure, pearson_bootstrap
 from task_dyva.visualization import BarPlot, PlotModelLatents
 from task_dyva.model_analysis import LatentSeparation
 
@@ -25,12 +25,15 @@ class Figure4():
     figdpi = 300
     palette = 'viridis'
 
-    def __init__(self, model_dir, save_dir, metadata):
+    def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
+        self.rng = np.random.default_rng(rand_seed)
+        self.n_boot = n_boot
+        self.alpha = 0.05
 
         # Containers for summary stats
         self.A_stats = {'mv': 2, 'pt': 2, 'cue': 1}
@@ -181,9 +184,16 @@ class Figure4():
         ax.set_xlabel('Model switch cost')
         ax.set_ylabel('Normalized distance between\ntask centroids (a.u.)')
 
+
         # Stats
-        r, p = pearsonr(ds, scs)
-        print(f'Panel C, normed dist. vs. model switch costs: r = {r}, p = {p}')
+        print('Panel C stats: normed dist. vs. model switch costs')
+        r, p, ci_lo, ci_hi = pearson_bootstrap(scs, ds, self.rng,
+                                               n_boot=self.n_boot,
+                                               alpha=self.alpha)
+        p_str = '{:0.2e}'.format(p)
+        tstr = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)}), p = {p_str}'
+        print(tstr)
+        print(f'Best-fit slope: {m}; intercept: {b}') 
         print('-----------------------------')
 
     def _make_panel_D(self, ax1, ax2):
