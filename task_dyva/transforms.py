@@ -57,6 +57,9 @@ class SmoothResponses():
                               for k in range(4)]
             kernel = [k / np.amax(k) for k in kernels_unnorm]
         elif params['smoothing_type'] == 'ex_gauss':
+            dists = [params['ex_gauss_rv'] for i in range(4)]
+            kernel = self._norm_and_shift(dists, t)
+        elif params['smoothing_type'] == 'ex_gauss_by_trial_type':
             kernel = self._norm_and_shift(params['params'], t)
         elif params['smoothing_type'] == 'kde':
             kernel = self._norm_and_shift(params['params'], t)

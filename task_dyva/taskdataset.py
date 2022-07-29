@@ -58,7 +58,7 @@ class EbbFlowDataset(Dataset):
     """
 
     needs_data_augmentation = ('kde', 'kde_no_switch_cost', 'adaptive_gaussian',
-                               'ex_gauss')
+                               'ex_gauss', 'ex_gauss_by_trial_type')
 
     def __init__(self, experiment_dir, params, preprocessed, split,
                  processed_dir, pre_transform=None, transform=None,
@@ -236,6 +236,13 @@ class EbbFlowDataset(Dataset):
                      'kernel_sd': self.params.get('kernel_sd', 50),
                      'params': {}}
 
+        if self.params['smoothing_type'] == 'ex_gauss':
+            # Smooth trials with an exGauss kernel estimated from all RTs
+            rts = []
+            for d in data:
+                rts.extend(d.discrete['urt_ms'])
+            sm_params['ex_gauss_rv'] = exgauss_mle(rts)
+
         for ttype in range(4):
             this_rts = []
             this_correct = []
@@ -261,7 +268,7 @@ class EbbFlowDataset(Dataset):
             # Smoothing info
             if self.params['smoothing_type'] == 'adaptive_gaussian':
                 this_sm = np.std(this_rts)
-            elif self.params['smoothing_type'] == 'ex_gauss':
+            elif self.params['smoothing_type'] == 'ex_gauss_by_trial_type':
                 this_sm = exgauss_mle(this_rts)
             elif self.params['smoothing_type'] == 'kde':
                 bw = self.params.get('data_aug_kernel_bandwidth', 0.25)
