@@ -4,7 +4,7 @@ import itertools
 import torch
 import numpy as np
 import pandas as pd
-from scipy.stats import special_ortho_group, pearsonr, norm, skew, exponnorm
+from scipy.stats import special_ortho_group, pearsonr, norm, exponnorm
 from sklearn.decomposition import PCA
 
 
@@ -290,12 +290,7 @@ def pj_bootstrap(x, rng, n_boot=1000, alpha=0.05,
     return m_true, ci_lo, ci_hi
 
 
-def exgauss_mme(x):
-    # Method of moments estimator for the parameters of the exGauss distribution
-    m = np.mean(x)
-    s = np.std(x)
-    g = skew(x) / 2 # divide by 2 to simplifiy subsequent expressions
-    mu = m - s * g**(1/3)
-    sd = np.sqrt(s**2 * (1 - g**(2/3)))
-    tau = s * g**(1/3) 
-    return exponnorm(tau / sd, loc=mu, scale=sd)
+def exgauss_mle(x):
+    # Fit an exGauss distribution by maximum-likelihood
+    shape, loc, scale = exponnorm.fit(x)
+    return exponnorm(shape, loc=loc, scale=scale)

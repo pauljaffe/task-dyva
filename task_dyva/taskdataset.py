@@ -23,7 +23,7 @@ import seaborn as sns
 from scipy.stats import gaussian_kde, bernoulli
 
 from . import transforms as T
-from .utils import z_pca, exgauss_mme
+from .utils import z_pca, exgauss_mle
 
 
 class EbbFlowDataset(Dataset):
@@ -262,7 +262,7 @@ class EbbFlowDataset(Dataset):
             if self.params['smoothing_type'] == 'adaptive_gaussian':
                 this_sm = np.std(this_rts)
             elif self.params['smoothing_type'] == 'ex_gauss':
-                this_sm = exgauss_mme(this_rts)
+                this_sm = exgauss_mle(this_rts)
             elif self.params['smoothing_type'] == 'kde':
                 bw = self.params.get('data_aug_kernel_bandwidth', 0.25)
                 this_sm = gaussian_kde(this_rts, bw_method=bw)
