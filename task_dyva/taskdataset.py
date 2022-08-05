@@ -23,7 +23,7 @@ import seaborn as sns
 from scipy.stats import gaussian_kde, bernoulli
 
 from . import transforms as T
-from .utils import z_pca, exgauss_mle
+from .utils import z_pca, exgauss_mle, RemapRTs
 
 
 class EbbFlowDataset(Dataset):
@@ -69,6 +69,10 @@ class EbbFlowDataset(Dataset):
         # rename a couple keys
         preprocessed['urt_ms'] = preprocessed.pop('resp_time')
         preprocessed['urespdir'] = preprocessed.pop('resp_dir')
+        # Optionally transform data for "optimal" model training
+        if self.params['smoothing_type'] == 'optimal':
+            remapper = RemapRTs(preprocessed, params['remap_rt'])
+            preprocessed = remapper.remap()
         self.preprocessed = preprocessed
         self.split = split
         self.resampling_type = self.params.get('data_augmentation_type', None)
@@ -242,6 +246,10 @@ class EbbFlowDataset(Dataset):
             for d in data:
                 rts.extend(d.discrete['urt_ms'])
             sm_params['ex_gauss_rv'] = exgauss_mle(rts)
+        elif self.params['smoothing_type'] == 'optimal':
+            sm_params['remap_rt'] = self.params['remap_rt']
+            sm_params['optimal_min_rt'] = self.params['optimal_min_rt']
+            sm_params['post_resp_buffer'] = self.params['post_resp_buffer']
 
         for ttype in range(4):
             this_rts = []

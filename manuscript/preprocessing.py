@@ -53,27 +53,37 @@ class Preprocess():
         self.model_dir = model_dir
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']
+        self.exgauss = metadata['exgauss']
         self.batch_size = batch_size
 
     def run_preprocessing(self):
-        for expt_str, model_type in zip(self.expts,
-                                        self.sc_status):
+        for expt_str, model_type, exg in zip(self.expts,
+                                             self.sc_status,
+                                             self.exgauss):
+
             print(f'Preprocessing experiment {expt_str}')
             this_model_dir = os.path.join(self.model_dir, expt_str)
             # Get model outputs
-            self._get_outputs_wrapper(this_model_dir, expt_str)
+            self._get_outputs_wrapper(this_model_dir, expt_str, exg)
             # Get model and behavior summary metrics
             # (including distance b/w task centroids)
-            self._get_summary(this_model_dir, model_type)
+            self._get_summary(this_model_dir, model_type, exg)
             # Find stable fixed points
-            self._fp_wrapper(this_model_dir, expt_str, model_type)
+            self._fp_wrapper(this_model_dir, expt_str, model_type, exg)
             # LDA analysis
-            self._lda_wrapper(this_model_dir, model_type)
+            self._lda_wrapper(this_model_dir, model_type, exg)
             # Clean up
-            self._clean_up(this_model_dir)
+            self._clean_up(this_model_dir, exg)
 
-    def _get_outputs_wrapper(self, model_dir, expt_str):
-        for noise_key, noise_sd in zip(self.all_noise_keys, self.all_noise_sds):
+    def _get_outputs_wrapper(self, model_dir, expt_str, exgauss):
+        if exgauss == 'exgauss+':
+            noise_keys = [self.primary_noise_key]
+            noise_sds = [self.primary_noise_sd]
+        else:
+            noise_keys = self.all_noise_keys
+            noise_sds = self.all_noise_sds
+
+        for noise_key, noise_sd in zip(noise_keys, noise_sds):
             if noise_key in self.latents_noise_keys:
                 analyze_latents = True
             else:
@@ -107,9 +117,16 @@ class Preprocess():
                                       stats_dir=self.analysis_dir,
                                       batch_size=self.batch_size)
 
-    def _get_summary(self, model_dir, model_type):
-        summary = {key: {} for key in self.all_noise_keys}
-        for noise_key, noise_sd in zip(self.all_noise_keys, self.all_noise_sds):
+    def _get_summary(self, model_dir, model_type, exgauss):
+        if exgauss == 'exgauss+':
+            noise_keys = [self.primary_noise_key]
+            noise_sds = [self.primary_noise_sd]
+        else:
+            noise_keys = self.all_noise_keys
+            noise_sds = self.all_noise_sds
+
+        summary = {key: {} for key in noise_keys}
+        for noise_key, noise_sd in zip(noise_keys, noise_sds):
             outputs = self._reload_outputs(model_dir, noise_key)
             if noise_key in self.latents_noise_keys:
                 latent_sep = LatentSeparation(outputs)
@@ -157,7 +174,10 @@ class Preprocess():
 
         return errors
 
-    def _fp_wrapper(self, model_dir, expt_str, model_type):
+    def _fp_wrapper(self, model_dir, expt_str, model_type, exgauss):
+        if exgauss == 'exgauss+':
+            return
+
         fp_path = os.path.join(model_dir,
                                self.analysis_dir,
                                self.fp_fn)
@@ -184,7 +204,10 @@ class Preprocess():
             this_fps = fpf.find_fixed_points(self.fp_N, self.fp_T)
             fp_summary = fpf.get_fixed_point_summary(this_fps)
 
-    def _lda_wrapper(self, model_dir, model_type):
+    def _lda_wrapper(self, model_dir, model_type, exgauss):
+        if exgauss == 'exgauss+':
+            return
+
         lda_path = os.path.join(model_dir,
                                 self.analysis_dir,
                                 self.lda_fn)
@@ -205,7 +228,10 @@ class Preprocess():
             outputs = pickle.load(path)
         return outputs
 
-    def _clean_up(self, model_dir):
+    def _clean_up(self, model_dir, exgauss):
+        if exgauss == 'exgauss+':
+            return
+
         for noise_key in self.all_noise_keys:
             if noise_key != self.primary_noise_key:
                 outputs_fn = f'{self.outputs_save_str}_{noise_key}SD.pkl'

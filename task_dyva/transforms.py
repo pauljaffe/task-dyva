@@ -63,6 +63,19 @@ class SmoothResponses():
             kernel = self._norm_and_shift(params['params'], t)
         elif params['smoothing_type'] == 'kde':
             kernel = self._norm_and_shift(params['params'], t)
+        elif params['smoothing_type'] == 'optimal':
+            # Smooth with a rectangular kernel
+            rt = params['remap_rt']
+            resp_buffer = params['post_resp_buffer']
+            min_rt = params['optimal_min_rt']
+            half_win = (rt+resp_buffer) / 2
+            t_on = self.kernel_t_max/2 + min_rt - rt
+            t_off = self.kernel_t_max/2 + 2*half_win - rt
+            on_ind = int(t_on // params['step_size'])
+            off_ind = int(t_off // params['step_size'])
+            single_kernel = np.zeros(len(t))
+            single_kernel[on_ind:off_ind] = 1
+            kernel = [single_kernel for i in range(4)]
         self.kernel = kernel
 
     def _norm_and_shift(self, dists, t):

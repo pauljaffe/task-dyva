@@ -48,7 +48,8 @@ class ConfigMixin:
                         'clip_grads', 'clip_val', 'n_workers', 'rand_seed', 
                         'learn_prior', 'objective', 'do_amsgrad', 'start_temp',
                         'cool_rate', 'temp_update_every', 'stop_patience', 
-                        'stop_min_epoch', 'stop_delta', 'stop_metric'}
+                        'stop_min_epoch', 'stop_delta', 'stop_metric',
+                        'L2_param'}
 
     _data_params = {'input_dim', 'u_dim', 'nth_play_range', 'outlier_method', 
                     'outlier_thresh', 'keep_every'}
@@ -60,7 +61,8 @@ class ConfigMixin:
                          'data_augmentation_type', 'data_aug_kernel_bandwidth',
                          'aug_rt_sd', 'aug_resample_frac', 'upscale_mult', 
                          'min_trials', 'post_resp_buffer', 'smoothing_type',
-                         'kernel_sd', 'match_accuracy', 'rt_method'}
+                         'kernel_sd', 'match_accuracy', 'rt_method',
+                         'remap_rt', 'optimal_min_rt'}
 
     _experiment_params = {'split_indices', 'processed_save_dir', 'mode',
                           'logger_type', 'do_early_stopping', 'params_to_load',
@@ -186,7 +188,8 @@ def save_figure(fig, save_dir, fn, save_svg=True, save_png=True):
 
 
 def plot_scatter(group_stats, params, ax, line_ext,
-                 rng, n_boot=1000, alpha=0.05):
+                 rng, n_boot=1000, alpha=0.05,
+                 plot_stats=False):
     # Model vs. user scatter plotting utility
     metric = params['metric']
     u_key = f'u_{metric}'
@@ -220,12 +223,17 @@ def plot_scatter(group_stats, params, ax, line_ext,
     m_sem = np.std(m_vals) / np.sqrt(len(m_vals))
     print(f'{metric} stats:')
     p_str = '{:0.2e}'.format(p)
-    tstr = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)}), p = {p_str}'
-    print(tstr)
+    r_str = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)})'
+    print(r_str)
+    print(p_str)
     print(f'Best-fit slope: {m}; intercept: {b}') 
     print(f'Participant {metric} mean +/- s.e.m.: {u_mean} +/- {u_sem}')
     print(f'Model {metric} mean +/- s.e.m.: {m_mean} +/- {m_sem}')
     print('--------------------------------------------------------')
+
+    if plot_stats:
+        ax.text(0.05, 0.95, r_str, transform=ax.transAxes, fontsize=5,
+                verticalalignment='top')
 
 
 def expt_stats_to_df(metrics, expts, age_bins, stats):
@@ -294,3 +302,57 @@ def exgauss_mle(x):
     # Fit an exGauss distribution by maximum-likelihood
     shape, loc, scale = exponnorm.fit(x)
     return exponnorm(shape, loc=loc, scale=scale)
+
+
+class RemapRTs():
+    # Change all RTs in a dataset to a fixed constant;
+    # used as part of the preprocessing pipeline for "optimal" model training. 
+
+    remap_keys = ['correct', 'mv_dir', 'point_dir', 'task_cue',
+                  'time_offset', 'urt_ms', 'urespdir']
+    singleton_keys = ['user_id', 'game_result_id', 'nth_master', 'age', 
+                      'timestamp_rel']
+    t_max = 60000  # ms
+
+    def __init__(self, data, rt, rsi=20):
+        self.data = data
+        self.rt = rt
+        self.rsi = rsi  # response-to-stimulus interval
+        self.remapped_data = {key: [] for key in self.remap_keys}
+        for skey in self.singleton_keys:
+            self.remapped_data[skey] = data[skey]
+
+    def _get_correct_dir(self, cue, mv, pt):
+        return mv if cue == 0 else pt
+
+    def remap(self):
+        for i in range(len(self.data)):
+            new_d = {key: [] for key in self.remap_keys}
+            new_d['urt_ms'] = [self.rt]
+            new_d['time_offset'] = [0]
+            mv_orig = self.data['mv_dir'][i]
+            pt_orig = self.data['point_dir'][i]
+            cue_orig = self.data['task_cue'][i]
+
+            for mv, pt, cue in zip(mv_orig, pt_orig, cue_orig):
+                abs_rt = new_d['time_offset'][-1] + self.rt
+                if abs_rt < self.t_max:
+                    new_d['urt_ms'].append(self.rt)
+                    new_d['time_offset'].append(new_d['time_offset'][-1]
+                                                + self.rsi + self.rt)
+                    new_d['mv_dir'].append(mv)
+                    new_d['point_dir'].append(pt)
+                    new_d['task_cue'].append(cue)
+                    new_d['correct'].append('T')  # all trials correct
+                    new_d['urespdir'].append(
+                        self._get_correct_dir(cue, mv, pt))
+                else:
+                    break
+
+            for key in self.remap_keys:
+                self.remapped_data[key].append(new_d[key])
+
+        remapped_np = {key: np.array(self.remapped_data[key], dtype=object)
+                       for key in self.remapped_data.keys()}
+
+        return remapped_np
