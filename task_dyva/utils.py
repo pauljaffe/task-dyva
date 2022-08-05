@@ -323,7 +323,7 @@ class RemapRTs():
             self.remapped_data[skey] = data[skey]
 
     def _get_correct_dir(self, cue, mv, pt):
-        return mv if cue == 0 else pt
+        return mv if cue == 'M' else pt
 
     def remap(self):
         for i in range(len(self.data)):

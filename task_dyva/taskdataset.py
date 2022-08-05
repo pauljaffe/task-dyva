@@ -757,9 +757,11 @@ class EbbFlowGameData():
             prev_cue = random.sample([0, 1], 1)[0]
         # Randomly sample condition
         con_ind = np.random.choice(4)
-        this_dist = self.resampling_info['rts'][con_ind]
         if self.resampling_type in ['kde', 'kde_no_switch_cost']:
+            this_dist = self.resampling_info['rts'][con_ind]
             new_rt_ms = this_dist.resample(size=1)
+        elif self.resampling_type == 'optimal':
+            new_rt_ms = params['remap_rt']
 
         # Stay vs. switch
         if con_ind in [2, 3]:
