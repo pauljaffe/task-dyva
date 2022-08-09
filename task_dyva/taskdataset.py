@@ -761,7 +761,7 @@ class EbbFlowGameData():
             this_dist = self.resampling_info['rts'][con_ind]
             new_rt_ms = this_dist.resample(size=1)
         elif self.resampling_type == 'optimal':
-            new_rt_ms = params['remap_rt']
+            new_rt_ms = self.params['remap_rt']
 
         # Stay vs. switch
         if con_ind in [2, 3]:

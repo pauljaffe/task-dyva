@@ -326,7 +326,7 @@ class RemapRTs():
         return mv if cue == 'M' else pt
 
     def remap(self):
-        for i in range(len(self.data)):
+        for i in range(len(self.data['urt_ms'])):
             new_d = {key: [] for key in self.remap_keys}
             new_d['urt_ms'] = [self.rt]
             new_d['time_offset'] = [0]
