@@ -69,13 +69,13 @@ class EbbFlowDataset(Dataset):
         # rename a couple keys
         preprocessed['urt_ms'] = preprocessed.pop('resp_time')
         preprocessed['urespdir'] = preprocessed.pop('resp_dir')
+        self.resampling_type = self.params.get('data_augmentation_type', None)
         # Optionally transform data for "optimal" model training
-        if self.params['smoothing_type'] == 'optimal':
+        if self.resampling_type == 'optimal':
             remapper = RemapRTs(preprocessed, params['remap_rt'])
             preprocessed = remapper.remap()
         self.preprocessed = preprocessed
         self.split = split
-        self.resampling_type = self.params.get('data_augmentation_type', None)
         # set up data transforms
         self.default_pre = [T.SmoothResponses(), T._Trim()]
         self.supplied_pre = pre_transform
