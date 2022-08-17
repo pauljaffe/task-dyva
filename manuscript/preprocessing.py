@@ -98,17 +98,25 @@ class Preprocess():
                                     expt_str,
                                     noise_key,
                                     noise_sd,
-                                    analyze_latents)
+                                    analyze_latents,
+                                    early)
 
     def _get_model_outputs(self, model_dir, expt_str, 
-                           noise_key, noise_sd, analyze_latents):
+                           noise_key, noise_sd, analyze_latents, early):
         save_str = f'{self.outputs_save_str}_{noise_key}SD.pkl'
         noise_params = {'noise_type': 'indep',
                         'noise_sd': noise_sd}
-        expt_kwargs = {'logger_type': None,
-                       'test': noise_params,
-                       'mode': 'testing', 
-                       'params_to_load': self.params_fn}
+        if early:
+            expt_kwargs = {'logger_type': None,
+                           'test': noise_params,
+                           'nth_play_range': [1, 45],
+                           'mode': 'testing', 
+                           'params_to_load': self.params_fn}
+        else:
+            expt_kwargs = {'logger_type': None,
+                           'test': noise_params,
+                           'mode': 'testing', 
+                           'params_to_load': self.params_fn}
 
         # Get model outputs, save
         expt = Experiment(model_dir, model_dir, self.raw_fn, 
