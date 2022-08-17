@@ -54,29 +54,34 @@ class Preprocess():
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']
         self.exgauss = metadata['exgauss']
+        self.early = metadata['early']
         self.batch_size = batch_size
 
     def run_preprocessing(self):
-        for expt_str, model_type, exg in zip(self.expts,
-                                             self.sc_status,
-                                             self.exgauss):
+        for expt_str, model_type, exg, this_early in zip(self.expts,
+                                                         self.sc_status,
+                                                         self.exgauss,
+                                                         self.early):
+
+            if not this_early:
+                continue
 
             print(f'Preprocessing experiment {expt_str}')
             this_model_dir = os.path.join(self.model_dir, expt_str)
             # Get model outputs
-            self._get_outputs_wrapper(this_model_dir, expt_str, exg)
+            self._get_outputs_wrapper(this_model_dir, expt_str, exg, this_early)
             # Get model and behavior summary metrics
             # (including distance b/w task centroids)
-            self._get_summary(this_model_dir, model_type, exg)
+            self._get_summary(this_model_dir, model_type, exg, this_early)
             # Find stable fixed points
-            self._fp_wrapper(this_model_dir, expt_str, model_type, exg)
+            self._fp_wrapper(this_model_dir, expt_str, model_type, exg, this_early)
             # LDA analysis
-            self._lda_wrapper(this_model_dir, model_type, exg)
+            self._lda_wrapper(this_model_dir, model_type, exg, this_early)
             # Clean up
-            self._clean_up(this_model_dir, exg)
+            self._clean_up(this_model_dir, exg, this_early)
 
-    def _get_outputs_wrapper(self, model_dir, expt_str, exgauss):
-        if exgauss == 'exgauss+':
+    def _get_outputs_wrapper(self, model_dir, expt_str, exgauss, early):
+        if exgauss == 'exgauss+' or early:
             noise_keys = [self.primary_noise_key]
             noise_sds = [self.primary_noise_sd]
         else:
@@ -117,8 +122,8 @@ class Preprocess():
                                       stats_dir=self.analysis_dir,
                                       batch_size=self.batch_size)
 
-    def _get_summary(self, model_dir, model_type, exgauss):
-        if exgauss == 'exgauss+':
+    def _get_summary(self, model_dir, model_type, exgauss, early):
+        if exgauss == 'exgauss+' or early:
             noise_keys = [self.primary_noise_key]
             noise_sds = [self.primary_noise_sd]
         else:
@@ -174,8 +179,8 @@ class Preprocess():
 
         return errors
 
-    def _fp_wrapper(self, model_dir, expt_str, model_type, exgauss):
-        if exgauss == 'exgauss+':
+    def _fp_wrapper(self, model_dir, expt_str, model_type, exgauss, early):
+        if exgauss == 'exgauss+' or early:
             return
 
         fp_path = os.path.join(model_dir,
@@ -204,8 +209,8 @@ class Preprocess():
             this_fps = fpf.find_fixed_points(self.fp_N, self.fp_T)
             fp_summary = fpf.get_fixed_point_summary(this_fps)
 
-    def _lda_wrapper(self, model_dir, model_type, exgauss):
-        if exgauss == 'exgauss+':
+    def _lda_wrapper(self, model_dir, model_type, exgauss, early):
+        if exgauss == 'exgauss+' or early:
             return
 
         lda_path = os.path.join(model_dir,
@@ -228,8 +233,8 @@ class Preprocess():
             outputs = pickle.load(path)
         return outputs
 
-    def _clean_up(self, model_dir, exgauss):
-        if exgauss == 'exgauss+':
+    def _clean_up(self, model_dir, exgauss, early):
+        if exgauss == 'exgauss+' or early:
             return
 
         for noise_key in self.all_noise_keys:
