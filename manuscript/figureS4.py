@@ -6,38 +6,34 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from task_dyva.visualization import BarPlot
-from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df
+from task_dyva.utils import save_figure, plot_scatter
 
 
 class FigureS4():
     """Analysis methods and plotting routines to reproduce
-    Figure S4 from the manuscript (RT variability).
+    Figure S4 from the manuscript (behavior summary at higher stimulus noise).
     """
 
     analysis_dir = 'model_analysis'
-    stats_fn = 'holdout_outputs_01SD.pkl'
-    figsize = (4.5, 2)
+    stats_fn = 'summary.pkl'
+    noise_key = '04'
+    figsize = (7, 2.1)
     figdpi = 300
-    line_ext = 0.1
-    age_bin_labels = ['20-29', '30-39', '40-49', '50-59', 
-                      '60-69', '70-79', '80-89']
+    line_ext = 10
 
     def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
-        self.age_bins = metadata['age_range']
         self.sc_status = metadata['switch_cost_type']
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
 
         # Containers for summary stats
-        self.group_stats = {'u_rt_sd': [], 'm_rt_sd': []}
-        self.analysis_expt_stats = []
-        self.analysis_age_bins = []
-        self.analysis_expt_strs = []
+        self.group_stats = {'m_switch_cost': [], 'u_switch_cost': [],
+                            'm_mean_rt': [], 'u_mean_rt': [], 
+                            'm_con_effect': [], 'u_con_effect': []}
 
     def make_figure(self):
         print('Making Figure S4...')
@@ -49,9 +45,8 @@ class FigureS4():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, sc in zip(self.expts, 
-                                    self.age_bins, 
-                                    self.sc_status):
+        for expt_str, sc in zip(self.expts, 
+                                self.sc_status):
             # Skip sc- models
             if sc == 'sc-':
                 continue
@@ -60,37 +55,34 @@ class FigureS4():
             stats_path = os.path.join(self.model_dir, expt_str, 
                                       self.analysis_dir, self.stats_fn)
             with open(stats_path, 'rb') as path:
-                expt_stats = pickle.load(path)
-            self.analysis_age_bins.append(ab)
-            self.analysis_expt_stats.append(expt_stats)
-            self.analysis_expt_strs.append(expt_str)
+                stats = pickle.load(path)
             for key in self.group_stats.keys():
-                self.group_stats[key].append(expt_stats.summary_stats[key])
+                self.group_stats[key].append(stats[self.noise_key][key])
 
     def _plot_figure_get_stats(self):
-        fig, axes = plt.subplots(1, 2, figsize=self.figsize,
+        fig, axes = plt.subplots(1, 3, figsize=self.figsize,
                                  dpi=self.figdpi)
 
-        # Panel A: Model vs. participant scatter for RT SD
-        A_params = {'ax_lims': [20, 350],
-                    'metric': 'rt_sd',
-                    'label': 'RT SD (ms)'}
+        # Panel A: Mean RT scatter
+        A_params = {'ax_lims': [600, 1250],
+                    'metric': 'mean_rt',
+                    'label': 'mean RT (ms)'}
         plot_scatter(self.group_stats, A_params, axes[0], self.line_ext,
                      self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
-        # Panel B: Model vs. participant RT SD binned by age
-        error_type = 'sem'
-        stats_df = expt_stats_to_df(['rt_sd'],
-                                    self.analysis_expt_strs,
-                                    self.analysis_age_bins,
-                                    self.analysis_expt_stats)
-        B_params = {'ylabel': 'RT SD (ms)',
-                    'xticklabels': self.age_bin_labels,
-                    'plot_legend': True}
-        B_bar = BarPlot(stats_df)
-        B_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
-                               error_type, axes[1], **B_params)
-        axes[1].set_xlabel('Age bin (years)')
+        # Panel B: Switch cost scatter
+        B_params = {'ax_lims': [-25, 350],
+                    'metric': 'switch_cost',
+                    'label': 'switch cost (ms)'}
+        plot_scatter(self.group_stats, B_params, axes[1], self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
+
+        # Panel C: Congruency effect scatter
+        C_params = {'ax_lims': [-15, 275],
+                    'metric': 'con_effect',
+                    'label': 'congruency effect (ms)'}
+        plot_scatter(self.group_stats, C_params, axes[2], self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         plt.tight_layout()
 

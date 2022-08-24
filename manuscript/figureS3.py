@@ -4,20 +4,24 @@ import copy
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon
 
-from task_dyva.utils import save_figure
+from task_dyva.visualization import BarPlot
+from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df
 
 
 class FigureS3():
     """Analysis methods and plotting routines to reproduce
-    Figure S3 from the manuscript (model vs. participant accuracy).
+    Figure S3 from the manuscript (model vs. participant accuracy;
+    model vs. participant RT variability).
     """
 
     analysis_dir = 'model_analysis'
-    stats_fn = 'behavior_summary.pkl'
-    figsize = (7, 1.5)
+    stats_fn = 'summary.pkl'
+    outputs_fn = 'holdout_outputs_01SD.pkl'
+    figsize = (7, 3.5)
     figdpi = 300
 
     noise_labels = ['01', '015', '02', '025', '03', '035', '04', '045',
@@ -28,20 +32,33 @@ class FigureS3():
     plot_keys = ['accuracy', 'acc_con_effect', 'acc_switch_cost']
     plot_labels = ['Accuracy', 'Accuracy congruency effect', 
                    'Accuracy switch cost']
+    age_bin_labels = ['20-29', '30-39', '40-49', '50-59', 
+                      '60-69', '70-79', '80-89']
+    line_ext = 0.1
     
-    def __init__(self, model_dir, save_dir, metadata):
+    def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']
+        self.age_bins = metadata['age_range']
+        self.exgauss_status = metadata['exgauss']
+        self.early_status = metadata['early']
+        self.rng = np.random.default_rng(rand_seed)
+        self.n_boot = n_boot
+        self.alpha = 0.05
 
         # Containers for summary stats
         self.stats_dict = {}
         for key in self.plot_keys:
             self.stats_dict[f'm_{key}'] = []
             self.stats_dict[f'u_{key}'] = []
-        self.all_stats = {n: copy.deepcopy(self.stats_dict) 
+        self.acc_stats = {n: copy.deepcopy(self.stats_dict) 
                           for n in self.noise_labels}
+        self.var_stats = {'u_rt_sd': [], 'm_rt_sd': []}
+        self.analysis_expt_stats = []
+        self.analysis_age_bins = []
+        self.analysis_expt_strs = []
 
     def make_figure(self):
         print('Making Figure S3...')
@@ -53,10 +70,12 @@ class FigureS3():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, sc in zip(self.expts, 
-                                self.sc_status):
+        for expt_str, sc, exg, early in zip(self.expts, 
+                                            self.sc_status,
+                                            self.exgauss_status,
+                                            self.early_status):
             # Skip sc- models
-            if sc == 'sc-':
+            if sc == 'sc-' or exg == 'exgauss+' or early:
                 continue
             
             stats_path = os.path.join(self.model_dir, expt_str, 
@@ -65,12 +84,26 @@ class FigureS3():
                 this_stats = pickle.load(path)
             for noise in self.noise_labels:
                 for key in self.stats_dict.keys():
-                    self.all_stats[noise][key].append(this_stats[noise][key])
+                    self.acc_stats[noise][key].append(this_stats[noise][key])
+
+            # Load data for variability analyses
+            var_path = os.path.join(self.model_dir, expt_str, 
+                                    self.analysis_dir, self.outputs_fn)
+            with open(var_path, 'rb') as path:
+                var_expt_stats = pickle.load(path)
+            self.analysis_age_bins.append(ab)
+            self.analysis_expt_stats.append(var_expt_stats)
+            self.analysis_expt_strs.append(expt_str)
+            for key in self.var_stats.keys():
+                self.var_stats[key].append(var_expt_stats.summary_stats[key])
 
     def _plot_figure_get_stats(self):
-        fig, axes = plt.subplots(1, 3, figsize=self.figsize,
+        fig, axes = plt.subplots(2, 3, figsize=self.figsize,
                                  dpi=self.figdpi)
-        for key, label, ax in zip(self.plot_keys, self.plot_labels, axes):
+
+        # Accuracy panels: a-c
+        for key, label, ax_ind in zip(self.plot_keys, self.plot_labels, range(3)):
+            ax = axes[0, i]
             u_key = f'u_{key}'
             m_key = f'm_{key}'
             this_u_means = []
@@ -103,13 +136,34 @@ class FigureS3():
             else:
                 ax.set_xlabel('')
 
+        # Panel d: Model vs. participant scatter for RT SD
+        D_params = {'ax_lims': [20, 350],
+                    'metric': 'rt_sd',
+                    'label': 'RT SD (ms)'}
+        plot_scatter(self.var_stats, D_params, axes[1, 0], self.line_ext,
+                     self.rng, n_boot=self.n_boot, alpha=self.alpha)
+
+        # Panel e: Model vs. participant RT SD binned by age
+        error_type = 'sem'
+        stats_df = expt_stats_to_df(['rt_sd'],
+                                    self.analysis_expt_strs,
+                                    self.analysis_age_bins,
+                                    self.analysis_expt_stats)
+        E_params = {'ylabel': 'RT SD (ms)',
+                    'xticklabels': self.age_bin_labels,
+                    'plot_legend': True}
+        E_bar = BarPlot(stats_df)
+        E_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
+                               error_type, axes[1, 1], **E_params)
+        axes[1, 1].set_xlabel('Age bin (years)')
+
         plt.tight_layout()
 
         return fig
 
     def _get_condition_stats(self, noise_key, noise_sd, u_key, m_key):
-        u_vals = np.array(self.all_stats[noise_key][u_key])
-        m_vals = np.array(self.all_stats[noise_key][m_key])
+        u_vals = np.array(self.acc_stats[noise_key][u_key])
+        m_vals = np.array(self.acc_stats[noise_key][m_key])
         u_mean = np.mean(u_vals)
         m_mean = np.mean(m_vals)
         u_sem = np.std(u_vals) / np.sqrt(len(u_vals))
