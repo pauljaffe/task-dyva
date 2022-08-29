@@ -62,7 +62,7 @@ class ConfigMixin:
                          'aug_rt_sd', 'aug_resample_frac', 'upscale_mult', 
                          'min_trials', 'post_resp_buffer', 'smoothing_type',
                          'kernel_sd', 'match_accuracy', 'rt_method',
-                         'remap_rt', 'optimal_min_rt'}
+                         'remap_rt', 'optimal_min_rt', 'optimal_kernel_width'}
 
     _experiment_params = {'split_indices', 'processed_save_dir', 'mode',
                           'logger_type', 'do_early_stopping', 'params_to_load',

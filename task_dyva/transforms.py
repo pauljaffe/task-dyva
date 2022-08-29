@@ -76,6 +76,19 @@ class SmoothResponses():
             single_kernel = np.zeros(len(t))
             single_kernel[on_ind:off_ind] = 1
             kernel = [single_kernel for i in range(4)]
+        elif params['smoothing_type'] == 'optimal_short':
+            # NOTE: kernel_width / step_size should be odd to ensure
+            # that the kernel is centered at the RT. 
+            # Smooth with a rectangular kernel
+            rt = params['remap_rt']
+            kw = params['kernel_width']
+            t_on = self.kernel_t_max/2 - kw/2
+            t_off = self.kernel_t_max/2 + kw/2
+            on_ind = int(t_on // params['step_size']) + 1
+            off_ind = int(t_off // params['step_size']) + 1
+            single_kernel = np.zeros(len(t))
+            single_kernel[on_ind:off_ind] = 1
+            kernel = [single_kernel for i in range(4)]
         self.kernel = kernel
 
     def _norm_and_shift(self, dists, t):

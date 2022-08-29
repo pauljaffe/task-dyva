@@ -58,7 +58,7 @@ class EbbFlowDataset(Dataset):
     """
 
     needs_data_augmentation = ('kde', 'kde_no_switch_cost', 'adaptive_gaussian',
-                               'ex_gauss', 'ex_gauss_by_trial_type')
+                               'ex_gauss', 'ex_gauss_by_trial_type', 'optimal')
 
     def __init__(self, experiment_dir, params, preprocessed, split,
                  processed_dir, pre_transform=None, transform=None,
@@ -250,6 +250,9 @@ class EbbFlowDataset(Dataset):
             sm_params['remap_rt'] = self.params['remap_rt']
             sm_params['optimal_min_rt'] = self.params['optimal_min_rt']
             sm_params['post_resp_buffer'] = self.params['post_resp_buffer']
+        elif self.params['smoothing_type'] == 'optimal_short':
+            sm_params['remap_rt'] = self.params['remap_rt']
+            sm_params['kernel_width'] = self.params['optimal_kernel_width']
 
         for ttype in range(4):
             this_rts = []

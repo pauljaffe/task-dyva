@@ -432,7 +432,7 @@ class Experiment(nn.Module,
             self.early_stopping.counter = self.checkpoint.get(
                 'stop_counter', 0)
 
-    def plot_generated_sample(self, epoch, dataset, do_plot=False, 
+    def plot_generated_sample(self, epoch, dataset, do_plot=False,
                               sample_ind=None, stim_ylims=None,
                               resp_ylims=None):
         """Plot the model inputs and outputs for a single sample (game).
