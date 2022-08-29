@@ -102,8 +102,10 @@ class Experiment(nn.Module,
         self.objective = getattr(
             objectives, self.config_params['training_params']['objective'])
         self.obj_str = self.config_params['training_params']['objective']
-        self.L2_param = self.config_params['training_params'].get(
-            'L2_param', None)
+        self.sparsity_param = self.config_params['training_params'].get(
+            'sparsity_param', None)
+        self.sparsity_thresh = self.config_params['training_params'].get(
+            'sparsity_thresh', None)
         self.clip_grads = self.config_params['training_params']['clip_grads']
         self.clip_val = self.config_params['training_params']['clip_val']
         self.keep_every = self.config_params['data_params']['keep_every']
@@ -191,10 +193,11 @@ class Experiment(nn.Module,
                 if self.obj_str == 'elbo':
                     this_NLL, this_loss = self.objective(self.model, loaded_batch,
                                                          self.anneal_param)
-                elif self.obj_str == 'elboL2':
+                elif self.obj_str == 'elbo_sparse':
                     this_NLL, this_loss = self.objective(self.model, loaded_batch,
                                                          self.anneal_param, 
-                                                         self.L2_param)
+                                                         self.sparsity_param,
+                                                         self.sparsity_thresh)
 
                 this_loss.backward()
 
@@ -208,10 +211,10 @@ class Experiment(nn.Module,
                 if self.obj_str == 'elbo':
                     this_NLL, this_loss = self.objective(
                         self.model, loaded_batch, self._max_anneal)
-                elif self.obj_str == 'elboL2':
+                elif self.obj_str == 'elbo_sparse':
                     this_NLL, this_loss = self.objective(
                         self.model, loaded_batch, self._max_anneal,
-                        self.L2_param)
+                        self.sparsity_param, self.sparsity_thresh)
 
             loss_tot += this_loss / n_time
             NLL_tot += this_NLL / n_time

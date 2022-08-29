@@ -49,7 +49,7 @@ class ConfigMixin:
                         'learn_prior', 'objective', 'do_amsgrad', 'start_temp',
                         'cool_rate', 'temp_update_every', 'stop_patience', 
                         'stop_min_epoch', 'stop_delta', 'stop_metric',
-                        'L2_param'}
+                        'sparsity_param', 'sparsity_thresh'}
 
     _data_params = {'input_dim', 'u_dim', 'nth_play_range', 'outlier_method', 
                     'outlier_thresh', 'keep_every'}
