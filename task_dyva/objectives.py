@@ -43,3 +43,17 @@ def elbo_sparse(model, xu, anneal_param, penalty_param, thresh):
     avg_log_like = -log_like.mean(0)
     n_pos = torch.nonzero(px_w.mean > thresh).shape[0] / px_w.mean.shape[1]
     return avg_log_like, loss + penalty_param*n_pos
+
+
+def elboL2(model, xu, anneal_param, L2_param):
+    # Adds an additional L2 penalty to the outputs (not the weights)
+    # of the model; encourages sparse responses for the "optimal"
+    # model training. 
+    x, px_w, w, _, w_means, w_vars = model(xu)
+    log_like = (px_w.log_prob(x)).sum(0).sum(-1)
+    lqw_x = model.qw_x(w_means, w_vars).log_prob(w).sum(0).sum(-1)
+    lpw = model.pw(*model.pw_params).log_prob(w).sum(0).sum(-1)
+    loss = -(anneal_param * log_like + anneal_param * lpw - lqw_x).mean(0)
+    avg_log_like = -log_like.mean(0)
+    output_norm = torch.linalg.norm(px_w.mean, dim=(0, 2)).mean(0)
+    return avg_log_like, loss + L2_param*output_norm

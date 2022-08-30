@@ -181,7 +181,7 @@ class Figure4():
         
         # Plot all models
         ax.scatter(scs, ds, s=0.5, marker='o', zorder=1)
-        ax.set_xlabel('Model switch cost')
+        ax.set_xlabel('Model switch cost (ms)')
         ax.set_ylabel('Normalized distance between\ntask centroids (a.u.)')
 
 
