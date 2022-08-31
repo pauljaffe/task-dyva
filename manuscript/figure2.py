@@ -39,6 +39,9 @@ class Figure2():
         self.age_bins = metadata['age_range']
         self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
+        self.exgauss = metadata['exgauss']
+        self.early = metadata['early']
+        self.optimal = metadata['optimal']
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
@@ -63,12 +66,16 @@ class Figure2():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, uid, sc in zip(self.expts, 
-                                         self.age_bins, 
-                                         self.user_ids, 
-                                         self.sc_status):
-            # Skip sc- models
-            if sc == 'sc-':
+        for expt_str, ab, uid, sc, exg, early, opt in zip(self.expts, 
+                                                          self.age_bins, 
+                                                          self.user_ids, 
+                                                          self.sc_status,
+                                                          self.exgauss,
+                                                          self.early,
+                                                          self.optimal):
+
+            # Skip sc- models, exgauss+ models, early models, optimal models
+            if sc == 'sc-' or exg == 'exgauss+' or early or opt:
                 continue
             
             # Load stats from the holdout data

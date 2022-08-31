@@ -31,6 +31,9 @@ class FigureS7():
         self.expts = metadata['name']
         self.age_bins = metadata['age_range']
         self.sc_status = metadata['switch_cost_type']
+        self.exgauss = metadata['exgauss']
+        self.early = metadata['early']
+        self.optimal = metadata['optimal']
 
         # Containers for summary stats
         self.all_stats = {ab: [] for ab in self.age_bins}
@@ -44,11 +47,16 @@ class FigureS7():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, sc in zip(self.expts, 
-                                    self.age_bins, 
-                                    self.sc_status):
-            # Skip sc- models
-            if sc == 'sc-':
+        for expt_str, ab, uid, sc, exg, early, opt in zip(self.expts, 
+                                                          self.age_bins, 
+                                                          self.user_ids, 
+                                                          self.sc_status,
+                                                          self.exgauss,
+                                                          self.early,
+                                                          self.optimal):
+
+            # Skip sc- models, exgauss+ models, early models, optimal models
+            if sc == 'sc-' or exg == 'exgauss+' or early or opt:
                 continue
             
             # Load stats from the holdout data

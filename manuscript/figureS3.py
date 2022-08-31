@@ -41,9 +41,10 @@ class FigureS3():
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.sc_status = metadata['switch_cost_type']
+        self.exgauss = metadata['exgauss']
+        self.early = metadata['early']
+        self.optimal = metadata['optimal']
         self.age_bins = metadata['age_range']
-        self.exgauss_status = metadata['exgauss']
-        self.early_status = metadata['early']
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
@@ -70,12 +71,16 @@ class FigureS3():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, sc, exg, early in zip(self.expts, 
-                                            self.sc_status,
-                                            self.exgauss_status,
-                                            self.early_status):
-            # Skip sc- models
-            if sc == 'sc-' or exg == 'exgauss+' or early:
+        for expt_str, ab, uid, sc, exg, early, opt in zip(self.expts, 
+                                                          self.age_bins, 
+                                                          self.user_ids, 
+                                                          self.sc_status,
+                                                          self.exgauss,
+                                                          self.early,
+                                                          self.optimal):
+
+            # Skip sc- models, exgauss+ models, early models, optimal models
+            if sc == 'sc-' or exg == 'exgauss+' or early or opt:
                 continue
             
             stats_path = os.path.join(self.model_dir, expt_str, 

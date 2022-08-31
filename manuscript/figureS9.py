@@ -27,6 +27,9 @@ class FigureS9():
         self.age_bins = metadata['age_range']
         self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
+        self.exgauss = metadata['exgauss']
+        self.early = metadata['early']
+        self.optimal = metadata['optimal']
 
         # Containers for summary stats
         self.A_stats = {'sc_plus_switch_cost': [], 'sc_minus_switch_cost': []}
@@ -43,10 +46,17 @@ class FigureS9():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, uid, sc in zip(self.expts, 
-                                         self.age_bins, 
-                                         self.user_ids, 
-                                         self.sc_status):
+        for expt_str, ab, uid, sc, exg, early, opt in zip(self.expts, 
+                                                          self.age_bins, 
+                                                          self.user_ids, 
+                                                          self.sc_status,
+                                                          self.exgauss,
+                                                          self.early,
+                                                          self.optimal):
+
+            # Skip exgauss+ models, early models, optimal models
+            if exg == 'exgauss+' or early or opt:
+                continue
 
             if sc in ['sc+', 'sc-']:
                 # Load stats from the holdout data

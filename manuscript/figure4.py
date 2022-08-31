@@ -33,6 +33,7 @@ class Figure4():
         self.sc_status = metadata['switch_cost_type']
         self.exgauss = metadata['exgauss']
         self.early = metadata['early']
+        self.optimal = metadata['optimal']
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
@@ -57,13 +58,14 @@ class Figure4():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, uid, sc, exg, early in zip(self.expts, 
-                                                 self.user_ids, 
-                                                 self.sc_status,
-                                                 self.exgauss,
-                                                 self.early):
+        for expt_str, uid, sc, exg, early, opt in zip(self.expts, 
+                                                      self.user_ids, 
+                                                      self.sc_status,
+                                                      self.exgauss,
+                                                      self.early,
+                                                      self.optimal):
 
-            if exg == 'exgauss+' or early:
+            if exg == 'exgauss+' or early or opt:
                 continue
 
             # Load stats from the holdout data

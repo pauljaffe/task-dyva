@@ -32,6 +32,7 @@ class FigureS5():
         self.exgauss = metadata['exgauss']
         self.early = metadata['early']
         self.sc_status = metadata['switch_cost_type']
+        self.optimal = metadata['optimal']
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
@@ -61,13 +62,14 @@ class FigureS5():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, uid, exg, earl, sc in zip(self.expts, 
-                                                self.user_ids, 
-                                                self.exgauss,
-                                                self.early,
-                                                self.sc_status):
+        for expt_str, uid, exg, earl, sc, opt in zip(self.expts, 
+                                                     self.user_ids, 
+                                                     self.exgauss,
+                                                     self.early,
+                                                     self.sc_status,
+                                                     self.optimal):
 
-            if sc == 'sc-':
+            if sc == 'sc-' or opt:
                 continue
 
             if earl:  # Early practice models
