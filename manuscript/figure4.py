@@ -31,6 +31,8 @@ class Figure4():
         self.expts = metadata['name']
         self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
+        self.exgauss = metadata['exgauss']
+        self.early = metadata['early']
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
@@ -55,9 +57,14 @@ class Figure4():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, uid, sc in zip(self.expts, 
-                                     self.user_ids, 
-                                     self.sc_status):
+        for expt_str, uid, sc, exg, early in zip(self.expts, 
+                                                 self.user_ids, 
+                                                 self.sc_status,
+                                                 self.exgauss,
+                                                 self.early):
+
+            if exg == 'exgauss+' or early:
+                continue
 
             # Load stats from the holdout data
             stats_path = os.path.join(self.model_dir, expt_str, 
@@ -194,6 +201,12 @@ class Figure4():
         tstr = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)}), p = {p_str}'
         print(tstr)
         print(f'Best-fit slope: {m}; intercept: {b}') 
+        mean_d = np.mean(ds)
+        sem_d = np.std(ds) / np.sqrt(len(ds))
+        print(f'Mean +/- s.e.m. centroid distance: {mean_d} +/- {sem_d}')
+        mean_sc = np.mean(scs)
+        sem_sc = np.std(scs) / np.sqrt(len(scs))
+        print(f'Mean +/- s.e.m. switch cost (ms): {mean_sc} +/- {sem_sc}')
         print('-----------------------------')
 
     def _make_panel_D(self, ax1, ax2):

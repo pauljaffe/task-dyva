@@ -45,9 +45,11 @@ python make_supplement.py
 ### Notes 
 1) You may need to add the task-dyva module to PYTHONPATH. An easy way to do this is to add a .pth file with the path to the local task-dyva module to `~/anaconda3/envs/task-dyva/lib/pythonX.X/site-packages/`. See [this post](https://stackoverflow.com/questions/37006114/anaconda-permanently-include-external-packages-like-in-pythonpath) for more detailed instructions. 
 
-2) To rerun only a subset of the analyses, comment out the relevant code in the make scripts. See the notes at the top of the scripts for additional options and info.
+2) To rerun only a subset of the analyses, comment out the relevant code in the make scripts.
 
-3) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
+3) By default, the make_main script does not repeat computationally intensive preprocessing steps (e.g. recomputing model outputs for each model), but users who wish to repeat this preprocessing can do so by setting the "do_preprocessing" flag at the top of the script to True. See the notes at the top of the scripts for additional options and info.
+
+4) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
 
 
 Quick start guide to model training
@@ -71,6 +73,16 @@ python training_script.py
 5) To run the tests, just run `pytest` from the command line.
 
 6) See the "Troubleshooting" section below for examples of successful and failed training runs. 
+
+
+Hardware requirements
+------------
+
+#### Model training
+Using the default training parameters on GPU, training a single model typically requires ~30GB RAM, ~1.5GB GPU memory, and takes ~18-36h to train depending on what GPU is used (NVIDIA V100 Tensor Core: ~20h, NVIDIA GTX 1080 Ti: ~30h). Increasing the batch size can substantially reduce model training time, though in our experience the default batch size (128) produces the best model fits. 
+
+#### Reproducing the analyses
+The memory required to repeat the analyses from the paper *without* rerunning the preprocessing is minimal (<1GB). Running both make_main.py and make_supplement.py takes ~5mins. total. Rerunning the preprocessing requires more memory (~7GB) and takes about ~12h to run (tested on a 2017 MacBook Pro with a 2.8GHz processor and 16GB RAM). 
 
 
 Tracking model training
