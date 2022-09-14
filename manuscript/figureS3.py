@@ -40,6 +40,8 @@ class FigureS3():
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
+        self.age_bins = metadata['age_range']
+        self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
         self.exgauss = metadata['exgauss']
         self.early = metadata['early']
@@ -108,7 +110,7 @@ class FigureS3():
 
         # Accuracy panels: a-c
         for key, label, ax_ind in zip(self.plot_keys, self.plot_labels, range(3)):
-            ax = axes[0, i]
+            ax = axes[0, ax_ind]
             u_key = f'u_{key}'
             m_key = f'm_{key}'
             this_u_means = []

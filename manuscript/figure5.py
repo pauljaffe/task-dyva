@@ -33,6 +33,8 @@ class Figure5():
         self.model_dir = model_dir
         self.save_dir = save_dir
         self.expts = metadata['name']
+        self.age_bins = metadata['age_range']
+        self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
         self.exgauss = metadata['exgauss']
         self.early = metadata['early']

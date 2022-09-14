@@ -66,7 +66,7 @@ class Preprocess():
                                                               self.early,
                                                               self.optimal):
 
-            if not this_early:
+            if not opt:
                 continue
 
             print(f'Preprocessing experiment {expt_str}')

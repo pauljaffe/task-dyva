@@ -124,7 +124,7 @@ class FigureS5():
         print('Models trained on early practice data:')
         N_early = len(self.early_stats['u_mean_rt'])
         print(f'N early practice models: {N_early}')
-        # Panel a: Aean RT, early pracice
+        # Panel a: Mean RT, early pracice
         A_params = {'ax_lims': [600, 1700],
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
@@ -185,13 +185,12 @@ class FigureS5():
                      self.rng, n_boot=self.n_boot, alpha=self.alpha,
                      plot_stats=True)
 
-        # Panel g: Participant vs. model RT distribution KL-divergence
+        # Panel g: Participant vs. model RT distribution KL-divergence (CDF)
         G_ax = fig.add_subplot(gs[19:, :7])
-        hist_bins = np.arange(0, 0.8, 0.05)
-        sns.histplot(self.exgauss_klds, ax=G_ax, bins=hist_bins, color='b', label='exGaussian',
-                     common_norm=False, stat='probability')
-        sns.histplot(self.gauss_klds, ax=G_ax, bins=hist_bins, color='g', label='Gaussian',
-                     common_norm=False, stat='probability')
+        sns.ecdfplot(data=self.exgauss_klds, ax=G_ax, color='b', 
+                     label='exGaussian', linewidth=0.5)
+        sns.ecdfplot(data=self.gauss_klds, ax=G_ax, color='g', 
+                     label='Gaussian', linewidth=0.5)
         rs_stat, rs_p = ranksums(self.exgauss_klds, self.gauss_klds)
         exgauss_mean = np.mean(self.exgauss_klds)
         gauss_mean = np.mean(self.gauss_klds)
@@ -202,7 +201,7 @@ class FigureS5():
         print(f'KLD ranksum test stat: {rs_stat}, p-val: {rs_p}')
         G_ax.set_xlim(0, 0.6)
         G_ax.set_xlabel('Participant vs. model $D_{KL}$')
-        G_ax.set_ylabel('Probability')
+        G_ax.set_ylabel('Proportion')
         G_ax.legend()
         G_ax.get_legend().get_frame().set_linewidth(0.0)
 

@@ -418,7 +418,7 @@ class Experiment(nn.Module,
 
     def plot_generated_sample(self, epoch, dataset, do_plot=False,
                               sample_ind=None, stim_ylims=None,
-                              resp_ylims=None):
+                              resp_ylims=None, for_paper=False):
         """Plot the model inputs and outputs for a single sample (game).
 
         Args
@@ -434,6 +434,8 @@ class Experiment(nn.Module,
             the stimuli.
         resp_ylims (two-element list, optional): The y-axis limits for
             the responses.
+        for_paper (Boolean, optional): Return figure in addition to 
+            trial data; used to make figure panel in manuscript.
 
         Returns
         -------
@@ -457,15 +459,23 @@ class Experiment(nn.Module,
         rate_np = rate_out.cpu().detach()[:, 0, :].squeeze().numpy()
         trial = dataset.get_processed_sample(gen_inds[0])
         trial.get_extra_stats(output_rates=rate_np)
-        trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
-                                  resp_ylims=resp_ylims)
+        if for_paper:
+            trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
+                                      resp_ylims=resp_ylims, figsize=(5, 7),
+                                      textsize=8, lw=1, leg_fontsize=6)
+        else:
+            trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
+                                      resp_ylims=resp_ylims)
+            self.logger.log_sample_output(trial_fig, epoch)
 
-        self.logger.log_sample_output(trial_fig, epoch)
         if do_plot:
             plt.show()
         plt.close('all')
 
-        return trial
+        if for_paper:
+            return trial, trial_fig
+        else:
+            return trial
 
     def forward(self, inputs):
         # Compute a forward pass of the model; see forward method

@@ -978,7 +978,8 @@ class EbbFlowGameData():
             self.discrete[key].append(data[key])
 
     def plot(self, rates=None, do_plot=False, stim_ylims=None, 
-             resp_ylims=None):
+             resp_ylims=None, figsize=(10, 18), textsize=14,
+             lw=1.5, leg_fontsize=9):
         """Plot the continuous representation of the stimuli and responses
         for this game. For the responses, the continuous format 
         of the user's responses is plotted (used to train the model). 
@@ -996,8 +997,6 @@ class EbbFlowGameData():
             further tweaking. 
         """
 
-        textsize = 14
-        figsize = (10, 18)
         colors = ['royalblue', 'crimson', 'forestgreen', 'orange']
         n_time = self.continuous['point_dir'].shape[0]
         x_plot = np.arange(n_time) * self.step
@@ -1008,38 +1007,39 @@ class EbbFlowGameData():
         # Pointing stimuli
         for d in range(4):
             sns.lineplot(x=x_plot, y=self.continuous['point_dir'][:, d], 
-                         ax=axes[d], color=colors[0])
+                         ax=axes[d], color=colors[0], **{'linewidth': lw})
             axes[d].set_ylabel(self.direction_labels[d], fontsize=textsize)
             if d == 0:
-                axes[d].set_title('pointing stimuli', fontsize=textsize)
+                axes[d].set_title('Pointing stimuli', fontsize=textsize)
 
         # Moving stimuli
         for d in range(4):
             sns.lineplot(x=x_plot, y=self.continuous['mv_dir'][:, d], 
-                         ax=axes[d + 4], color=colors[1])
+                         ax=axes[d + 4], color=colors[1], **{'linewidth': lw})
             axes[d + 4].set_ylabel(self.direction_labels[d], fontsize=textsize)
             if d == 0:
-                axes[d + 4].set_title('moving stimuli', fontsize=textsize)
+                axes[d + 4].set_title('Moving stimuli', fontsize=textsize)
 
         # Task cues
         for d in range(2):
             sns.lineplot(x=x_plot, y=self.continuous['task_cue'][:, d], 
-                         ax=axes[d + 8], color=colors[2])
+                         ax=axes[d + 8], color=colors[2], **{'linewidth': lw})
             axes[d + 8].set_ylabel(self.task_labels[d], fontsize=textsize)
             if d == 0:
-                axes[d + 8].set_title('task cues', fontsize=textsize)
+                axes[d + 8].set_title('Task cues', fontsize=textsize)
 
         # Responses
         for d in range(4):
             # User
             user_resp = self.continuous['urespdir'][:, d]
             sns.lineplot(x=x_plot, y=user_resp, ax=axes[d + 10], color='k', 
-                         zorder=1, label='user')
+                         zorder=1, label='Target', **{'linewidth': lw})
 
             if rates is not None:
                 # Model
                 sns.lineplot(x=x_plot, y=rates[:, d], ax=axes[d + 10], 
-                             color=colors[3], zorder=2, label='model')
+                             color=colors[3], zorder=2, label='Model',
+                             **{'linewidth': lw})
                 this_mrts = [rt for rt, rdir in zip(self.discrete['mrt_abs'],
                                                     self.discrete['mrespdir'])
                              if rdir == d]
@@ -1051,13 +1051,13 @@ class EbbFlowGameData():
                 sns.scatterplot(x=x_plot[this_mrts], 
                                 y=rates[this_mrts, d], s=15, 
                                 ax=axes[d + 10], zorder=3, 
-                                label='response times')
+                                label='RTs')
                 axes[d + 10].set_ylabel(self.direction_labels[d], 
                                         fontsize=textsize)
 
             if d == 0:
-                axes[d + 10].set_title('responses', fontsize=textsize)
-                axes[d + 10].legend(loc=1, fontsize=textsize - 5, 
+                axes[d + 10].set_title('Outputs', fontsize=textsize)
+                axes[d + 10].legend(loc=1, fontsize=leg_fontsize,
                                     frameon=False,
                                     columnspacing=1.25, ncol=3)
             else:
@@ -1071,10 +1071,11 @@ class EbbFlowGameData():
         t_max = n_time * self.step
         axes[13].set_xticks(np.arange(0, t_max + 1000, 1000))
         axes[13].tick_params(axis="x", labelsize=textsize)
-        axes[13].set_xlabel('time (ms)', fontsize=textsize)
+        axes[13].set_xlabel('Time (ms)', fontsize=textsize)
         [axes[d].set_xlim([0, x_plot[-1]]) for d in range(14)]
 
         plt.tight_layout()
+        plt.subplots_adjust(hspace=0.2)
         if do_plot:
             plt.show()
         return fig, axes
