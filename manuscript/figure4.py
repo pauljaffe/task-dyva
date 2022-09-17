@@ -1,11 +1,12 @@
 import os
 import pickle
+import warnings
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import wilcoxon
+from scipy.stats import wilcoxon, PearsonRConstantInputWarning
 
 from task_dyva.utils import save_figure, pearson_bootstrap
 from task_dyva.visualization import BarPlot, PlotModelLatents
@@ -37,6 +38,8 @@ class Figure4():
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
+        # Constant input warning refers to calculations not included in summary analyses
+        warnings.simplefilter('ignore', PearsonRConstantInputWarning)
 
         # Containers for summary stats
         self.A_stats = {'mv': 2, 'pt': 2, 'cue': 1}
@@ -49,7 +52,6 @@ class Figure4():
 
     def make_figure(self):
         print('Making Figure 4...')
-        print('Note: PearsonRConstantInputWarning is handled sensibly; see Methods')
         self._run_preprocessing()
         print('Stats for Figure 4')
         print('------------------')
@@ -145,16 +147,10 @@ class Figure4():
         models_with_low_N = np.count_nonzero(np_low_N)
         mean_num_low_N = np.mean(np_low_N[np.nonzero(np_low_N)])
         sem_num_low_N = np.std(np_low_N[np.nonzero(np_low_N)]) / np.sqrt(models_with_low_N)
-        np_constant = np.array(self.num_constant)
-        models_with_constant = np.count_nonzero(np_constant)
-        mean_num_constant = np.mean(np_constant[np.nonzero(np_constant)])
         print('N models with stimulus combinations excluded from within model ' \
               f'correlation summary due to low N: {models_with_low_N}; ' \
               'mean +/- s.e.m. exclusions within those models: ' \
               f'{mean_num_low_N} +/- {sem_num_low_N}')
-        print('N models with stimulus combinations excluded from within model ' \
-              f'correlation summary due to constant RT: {models_with_constant}; ' \
-              f'mean exclusions within those models: {mean_num_constant}')
         print('-----------------------------')
 
         print('Panel B, main summary stats')
@@ -164,6 +160,7 @@ class Figure4():
         print(f'Mean +/- s.e.m. corr. within model, dist vs. model RTs: ' \
               f'{np.mean(self.B_stats)} +/- {np.std(self.B_stats) / np.sqrt(N)}')
         print(f'p = {p}')
+        print(f'Total models analyzed: {N}')
         print(f'Num. models with positive corr.: {n_pos}')
         print(f'Fraction of models with positive corr.: {n_pos / N}')
         cmap = sns.color_palette(self.palette, as_cmap=True)
@@ -174,8 +171,7 @@ class Figure4():
         ax.set_xlabel("Mean Pearsons's r between distance\nto task centroid and RT (switch trials)")
         ax.set_ylabel('Count')
         ax.set_xlim([-0.75, 0.75])
-        ax.set_ylim([0, 20])
-        ax.set_yticks([0, 5, 10, 15, 20])
+        ax.set_yticks([0, 5, 10, 15, 20, 25])
         print('-----------------------------')
 
     def _make_panel_C(self, ax, line_ext=10):
