@@ -461,8 +461,8 @@ class Experiment(nn.Module,
         trial.get_extra_stats(output_rates=rate_np)
         if for_paper:
             trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
-                                      resp_ylims=resp_ylims, figsize=(5, 7),
-                                      textsize=8, lw=1, leg_fontsize=6)
+                                      resp_ylims=resp_ylims, figsize=(4.5, 6),
+                                      textsize=6, lw=0.75, leg_fontsize=6)
         else:
             trial_fig, _ = trial.plot(rates=rate_np, stim_ylims=stim_ylims,
                                       resp_ylims=resp_ylims)

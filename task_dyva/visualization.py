@@ -139,14 +139,21 @@ class BarPlot():
         assert error_type in self.supported_error, \
            'error_type must be one of the following: ' \
            f'{self.supported_error}'
-        colors = sns.color_palette(palette=self.palette, n_colors=len(keys))
         width = kwargs.get('width', 0.75)
-        plot_data = [self.df[key] for key in keys]
+        if kwargs.get('plot_data', None) is not None:
+            plot_data = kwargs['plot_data']
+        else:
+            plot_data = [self.df[key] for key in keys]
+        colors = sns.color_palette(palette=self.palette, n_colors=len(plot_data))
+        show_all = kwargs.get('show_all', False)
         for di, d in enumerate(plot_data):
             d_mean = np.mean(d)
             d_sem = np.std(d) / np.sqrt(len(d))
             ax.bar(di, d_mean, yerr=d_sem, width=width, error_kw={'elinewidth': 1},
                    **{'fc': colors[di]})
+            if show_all:
+                sns.swarmplot(y=d, orient='v', color='k',
+                              size=2, ax=ax)
         ax = self._adjust_bar(np.arange(len(plot_data)), ax, **kwargs)
         return ax
 
@@ -178,7 +185,7 @@ class BarPlot():
         ax.set_xlabel(kwargs.get('xlabel', None))
         ax.set_ylabel(kwargs.get('ylabel', None))
         ax.set_xticks(plot_x)
-        ax.set_xticklabels(kwargs.get('xticklabels', None),
+        ax.set_xticklabels(kwargs.get('xticklabels', []),
                            rotation=45, ha='right', rotation_mode='anchor')
         if 'yticks' in kwargs.keys():
             ax.set_yticks(kwargs['yticks'])

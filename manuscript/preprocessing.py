@@ -66,9 +66,6 @@ class Preprocess():
                                                               self.early,
                                                               self.optimal):
 
-            if not opt:
-                continue
-
             print(f'Preprocessing experiment {expt_str}')
             this_model_dir = os.path.join(self.model_dir, expt_str)
             # Get model outputs
@@ -144,13 +141,14 @@ class Preprocess():
         summary = {key: {} for key in noise_keys}
         for noise_key, noise_sd in zip(noise_keys, noise_sds):
             outputs = self._reload_outputs(model_dir, noise_key)
-            if noise_key in self.latents_noise_keys:
+            if noise_key in self.latents_noise_keys and not optimal:
                 latent_sep = LatentSeparation(outputs)
                 dist_stats = latent_sep.analyze()
 
             for m in self.metrics:
                 if m == 'normed_centroid_dist':
-                    summary[noise_key][m] = dist_stats[m]
+                    if not optimal:
+                        summary[noise_key][m] = dist_stats[m]
                 else:
                     u_key = f'u_{m}'
                     m_key = f'm_{m}'
