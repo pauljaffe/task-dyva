@@ -1,12 +1,14 @@
 import os
 import copy
 import pickle
+import warnings
 
 import numpy as np
 import pandas as pd
 
 from task_dyva import Experiment
 from task_dyva.model_analysis import FixedPointFinder, LatentsLDA, LatentSeparation
+from scipy.stats import PearsonRConstantInputWarning
 
 
 class Preprocess():
@@ -58,6 +60,8 @@ class Preprocess():
         self.optimal = metadata['optimal']
         self.rand_seed = rand_seed
         self.batch_size = batch_size
+        # Constant input warning refers to calculations not included in summary analyses
+        warnings.simplefilter('ignore', PearsonRConstantInputWarning)
 
     def run_preprocessing(self):
         for expt_str, model_type, exg, this_early, opt in zip(self.expts,

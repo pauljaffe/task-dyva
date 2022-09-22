@@ -209,8 +209,11 @@ def plot_scatter(group_stats, params, ax, line_ext,
     ax.scatter(u_vals, m_vals, s=0.2, marker='o', zorder=2, alpha=0.8)
     ax.set_xlabel(f"Participant {params['label']}")
     ax.set_ylabel(f"Model {params['label']}")
-    ax.set_xlim(params['ax_lims'])
-    ax.set_ylim(params['ax_lims'])
+    try:
+        ax.set_xlim(params['ax_lims'])
+        ax.set_ylim(params['ax_lims'])
+    except:
+        pass  # default axis lims
 
     # Stats
     r, p, ci_lo, ci_hi = pearson_bootstrap(u_vals, m_vals, rng,
@@ -355,3 +358,21 @@ class RemapRTs():
                        for key in self.remapped_data.keys()}
 
         return remapped_np
+
+
+def adjust_boxplot(ax, **kwargs):
+    ax.set_xlabel(kwargs.get('xlabel', None))
+    ax.set_ylabel(kwargs.get('ylabel', None))
+    ax.set_xticklabels(kwargs.get('xticklabels', []),
+                       rotation=45, ha='right', rotation_mode='anchor')
+    ax.set_xlim(kwargs.get('xlim', None))
+    ax.set_ylim(kwargs.get('ylim', None))
+    if kwargs.get('plot_legend', False):
+        ax.get_legend().set_title(None)
+        ax.get_legend().get_frame().set_linewidth(0.0)  
+    else:
+        try:
+            ax.get_legend().remove()
+        except:
+            pass  # no legend to begin with
+    return ax

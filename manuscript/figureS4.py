@@ -17,7 +17,7 @@ class FigureS4():
     analysis_dir = 'model_analysis'
     stats_fn = 'summary.pkl'
     noise_key = '04'
-    figsize = (7, 2.1)
+    figsize = (6.5, 2)
     figdpi = 300
     line_ext = 10
 
@@ -83,14 +83,14 @@ class FigureS4():
                      self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         # Panel B: Switch cost scatter
-        B_params = {'ax_lims': [-25, 350],
+        B_params = {'ax_lims': [-25, 380],
                     'metric': 'switch_cost',
                     'label': 'switch cost (ms)'}
         plot_scatter(self.group_stats, B_params, axes[1], self.line_ext,
                      self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         # Panel C: Congruency effect scatter
-        C_params = {'ax_lims': [-15, 275],
+        C_params = {'ax_lims': [-5, 280],
                     'metric': 'con_effect',
                     'label': 'congruency effect (ms)'}
         plot_scatter(self.group_stats, C_params, axes[2], self.line_ext,

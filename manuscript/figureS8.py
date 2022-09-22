@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import f_oneway
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
-from task_dyva.utils import save_figure, pearson_bootstrap
-from task_dyva.visualization import PlotModelLatents, BarPlot
+from task_dyva.utils import save_figure, pearson_bootstrap, adjust_boxplot
+from task_dyva.visualization import PlotModelLatents
 
 
 class FigureS8():
@@ -29,7 +29,7 @@ class FigureS8():
                     'ages60to69', 'ages70to79', 'ages80to89']
     age_bin_labels = ['20-29', '30-39', '40-49', '50-59', 
                       '60-69', '70-79', '80-89']
-    figsize = (10, 2.5)
+    figsize = (8, 3.5)
     figdpi = 300
     palette = 'viridis'
 
@@ -107,7 +107,7 @@ class FigureS8():
     def _plot_figure(self):
         fig = plt.figure(constrained_layout=False, figsize=self.figsize, 
                          dpi=self.figdpi)
-        gs = fig.add_gridspec(7, 16)
+        gs = fig.add_gridspec(5, 16)
 
         # Panel C: Example model latent state trajectories
         for i, uid in enumerate(self.ex.keys()):
@@ -116,11 +116,11 @@ class FigureS8():
             _ = self._make_ex_panel(ax, params)
 
         # Panel D: Centroid distance vs. switch cost (different noise levels)
-        axD = fig.add_subplot(gs[4:, 0:3])
+        axD = fig.add_subplot(gs[3:, 0:4])
         self._make_panel_D(axD)
 
         # Panel E: Centroid distance vs. age
-        axE = fig.add_subplot(gs[4:, 4:6])
+        axE = fig.add_subplot(gs[3:, 6:10])
         self._make_panel_E(axE)
 
         return fig
@@ -168,14 +168,21 @@ class FigureS8():
         params = {'xticklabels': self.age_bin_labels,
                   'xlabel': xlabel,
                   'ylabel': ylabel,
-                  'width': 0.65}
-        bar = BarPlot(self.age_df)
-        _, data = bar.alt_plot_bar('age_bin', self.age_bin_strs,
-                                   'normed_centroid_dist', error_type, ax, **params)
+                  'plot_legend': False}
+        #bar = BarPlot(self.age_df)
+        #_, data = bar.alt_plot_bar('age_bin', self.age_bin_strs,
+        #                           'normed_centroid_dist', error_type, ax, **params)
+        sns.boxplot(data=self.age_df, x='age_bin', y='normed_centroid_dist',
+                    ax=ax, orient='v', fliersize=1, palette=self.palette,
+                    linewidth=0.5, width=0.6)
+        adjust_boxplot(ax, **params)
 
         # Stats
         print(f'Stats for panel E: ')
-        f_stat, p = f_oneway(*data)
+        group_var = 'age_bin'
+        anova_data = [self.age_df.query(f'{group_var} == @gv')['normed_centroid_dist'].values 
+                      for gv in self.age_bin_strs]
+        f_stat, p = f_oneway(*anova_data)
         print(f'One-way ANOVA F stat = {f_stat}, p = {p}')
         tukey = pairwise_tukeyhsd(endog=self.age_df['normed_centroid_dist'],
                                   groups=self.age_df['age_bin'],

@@ -8,8 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon
 
-from task_dyva.visualization import BarPlot
-from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df
+from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df, adjust_boxplot
 
 
 class FigureS3():
@@ -21,8 +20,10 @@ class FigureS3():
     analysis_dir = 'model_analysis'
     stats_fn = 'summary.pkl'
     outputs_fn = 'holdout_outputs_01SD.pkl'
-    figsize = (7, 3.5)
+    figsize = (6.5, 3)
     figdpi = 300
+    box_colors = {'Participants': (0.2363, 0.3986, 0.5104, 1.0),
+                  'Models': (0.2719, 0.6549, 0.4705, 1.0)}
 
     noise_labels = ['01', '015', '02', '025', '03', '035', '04', '045',
                     '05', '055', '06']
@@ -144,7 +145,7 @@ class FigureS3():
                 ax.set_xlabel('')
 
         # Panel d: Model vs. participant scatter for RT SD
-        D_params = {'ax_lims': [20, 350],
+        D_params = {'ax_lims': [15, 350],
                     'metric': 'rt_sd',
                     'label': 'RT SD (ms)'}
         plot_scatter(self.var_stats, D_params, axes[1, 0], self.line_ext,
@@ -157,13 +158,15 @@ class FigureS3():
                                     self.analysis_age_bins,
                                     self.analysis_expt_stats)
         E_params = {'ylabel': 'RT SD (ms)',
+                    'xlabel': 'Age bin (years)',
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': True}
-        E_bar = BarPlot(stats_df)
-        E_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
-                               error_type, axes[1, 1], **E_params)
-        axes[1, 1].set_xlabel('Age bin (years)')
+        sns.boxplot(data=stats_df, x='age_bin', y='value', hue='model_or_user',
+                    ax=axes[1, 1], orient='v', fliersize=1, palette=self.box_colors,
+                    linewidth=0.5)
+        adjust_boxplot(axes[1, 1], **E_params)
 
+        fig.delaxes(axes[1][2])
         plt.tight_layout()
 
         return fig
@@ -178,7 +181,7 @@ class FigureS3():
         if noise_key in self.stats_noise:
             w, p = wilcoxon(u_vals, y=m_vals, mode='approx')
             print(f'{u_key[2:]}, {noise_sd}SD noise stats:')
-            print(f'Participant vs. model signed-rank p-val: {p}')
+            print(f'Participant vs. model signed-rank p-val: {p}, W = {w}')
             print(f'Participant mean +/- s.e.m.: {u_mean} +/- {u_sem}')
             print(f'Model mean +/- s.e.m.: {m_mean} +/- {m_sem}')
             print('----------------------------------')

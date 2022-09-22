@@ -110,7 +110,7 @@ class FigureS9():
 
         # Plot all models
         for plus, minus in zip(sc_plus, sc_minus):
-            ax.plot([0, 1], [plus, minus], 'b-', alpha=0.5, 
+            ax.plot([0, 1], [plus, minus], 'g-', alpha=0.4, 
                     zorder=1, linewidth=0.5)
 
         # Plot mean +/- s.e.m.
@@ -125,7 +125,7 @@ class FigureS9():
         ax.set_ylabel(params['ylabel'])
         ax.set_xticks([0, 1])
         ax.set_xlim([-0.5, 1.5])
-        ax.set_ylim(params['ylim'])
+        #ax.set_ylim(params['ylim'])
         ax.set_xticklabels(['sc+ models', 'sc- models'], rotation=45, 
                            ha='right', rotation_mode='anchor') 
         
@@ -138,5 +138,5 @@ class FigureS9():
         print('---------------------------------------------')
 
     def _plot_mean_sem(self, x, mean, sem, ax):
-        ax.plot(x, mean, 'k.', markerfacecolor='k', ms=2, mew=0.5)
+        ax.plot(x, mean, 'k_', markerfacecolor='k', ms=3, mew=0.5)
         ax.plot([x, x], [mean - sem, mean + sem], 'k-', linewidth=0.5)

@@ -30,6 +30,7 @@ class FigureS2():
         self.save_dir = save_dir
         self.expts = metadata['name']
         self.age_bins = metadata['age_range']
+        self.user_ids = metadata['user_id']
         self.sc_status = metadata['switch_cost_type']
         self.exgauss = metadata['exgauss']
         self.early = metadata['early']
@@ -86,10 +87,11 @@ class FigureS2():
                 if ax_ind == 0:
                     this_ax.set_title(self.age_bin_labels[ab_ind])
                 if ax_ind == 0 and ab_ind == 0:
-                    this_ax.set_ylabel('RT (ms)')
                     this_ax.get_legend().set_title(None)
-                    this_ax.get_legend().get_frame().set_linewidth(0.0) 
-                    this_ax.legend(labels=['Participant', 'Model'])
+                    handles, labels = this_ax.get_legend_handles_labels()
+                    this_ax.legend(handles=handles, labels=['Participant', 'Model'])
+                    this_ax.get_legend().get_frame().set_linewidth(0.0)
+                    this_ax.set_ylabel('RT (ms)')
                 else:
                     this_ax.get_legend().remove()
 

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon
 
 from task_dyva.utils import save_figure
-from task_dyva.visualization import BarPlot, PlotModelLatents
+from task_dyva.visualization import PlotModelLatents
 
 
 class Figure3():
@@ -24,8 +24,9 @@ class Figure3():
                      'same_response', 'different_response']
     lda_summary_fn = 'lda_summary.pkl'
     example_user = 3139
-    figsize = (7, 5.25)
+    figsize = (5.5, 4)
     figdpi = 300
+    kde_colors = sns.color_palette(palette='viridis', n_colors=4)
 
     def __init__(self, model_dir, save_dir, metadata):
         self.model_dir = model_dir
@@ -54,13 +55,12 @@ class Figure3():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, uid, sc, exg, early, opt in zip(self.expts, 
-                                                          self.age_bins, 
-                                                          self.user_ids, 
-                                                          self.sc_status,
-                                                          self.exgauss,
-                                                          self.early,
-                                                          self.optimal):
+        for expt_str, uid, sc, exg, early, opt in zip(self.expts, 
+                                                      self.user_ids, 
+                                                      self.sc_status,
+                                                      self.exgauss,
+                                                      self.early,
+                                                      self.optimal):
 
             # Skip sc- models, exgauss+ models, early models, optimal models
             if sc == 'sc-' or exg == 'exgauss+' or early or opt:
@@ -88,37 +88,38 @@ class Figure3():
             with open(fp_summary_path, 'rb') as path:
                 fp_summary = pickle.load(path)
             self.group_fp_summary.append(
-                self._get_user_fp_stats(fp_summary, uid))
+                self._get_user_fp_stats(fp_summary, expt_str))
 
             # LDA analyses
             lda_summary_path = os.path.join(self.model_dir, expt_str, 
                                             self.analysis_dir, self.lda_summary_fn)
             with open(lda_summary_path, 'rb') as path:
                 lda_summary = pickle.load(path)
+            lda_summary['expt'] = expt_str
             self.group_lda_summary.append(pd.DataFrame(lda_summary, index=[0]))
 
     def _plot_figure_get_stats(self):
         fig = plt.figure(constrained_layout=False, figsize=self.figsize, 
                          dpi=self.figdpi)
-        gs = fig.add_gridspec(12, 20)
+        gs = fig.add_gridspec(11, 20)
 
         # Panel A: Example model trajectories + fixed points
-        axA = fig.add_subplot(gs[0:10, 0:10], projection='3d')
+        axA = fig.add_subplot(gs[0:11, 0:11], projection='3d')
         self._make_panel_A(axA)
 
         # Panel B: PC number vs. variance explained
-        axB = fig.add_subplot(gs[0:3, 12:20])
+        axB = fig.add_subplot(gs[0:2, 13:20])
         self._make_panel_B(axB)
 
         # Panel C: LDA summary
-        axC = fig.add_subplot(gs[4:7, 12:15])
+        axC = fig.add_subplot(gs[3:5, 13:20])
         self._make_panel_C(axC)
 
         # Get summary statistics for the fixed points
         group_fp_df = self._get_group_fp_stats()
 
         # Panel D: Distance between fixed points
-        axD = fig.add_subplot(gs[4:7, 17:20])
+        axD = fig.add_subplot(gs[6:8, 13:20])
         self._make_panel_D(axD, group_fp_df)
 
         return fig
@@ -169,6 +170,7 @@ class Figure3():
         df = pd.concat(self.group_lda_summary, ignore_index=True)
         keys = ['bw_error', 'bw_shuffle_error', 
                 'within_error', 'within_shuffle_error']
+        df_plot = pd.melt(df, id_vars=['expt'], value_vars=keys)
         plot_labels = ['Between task', 'Between task shuffle', 
                        'Within task', 'Within task shuffle']
         ylabel = 'Misclassification rate'
@@ -178,8 +180,11 @@ class Figure3():
         error_type = 'sem'
         kwargs = {'xticklabels': plot_labels, 'ylabel': ylabel,
                   'yticks': yticks, 'xlim': xlim, 'ylim': ylim}
-        barp = BarPlot(df)
-        _ = barp.plot_bar(keys, error_type, ax, **kwargs)
+        sns.kdeplot(data=df_plot, x='value', hue='variable', ax=ax,
+                    common_norm=False, cumulative=True, linewidth=0.5)
+        ax.set_xlabel('Misclassification rate')
+        ax.set_ylabel('Density')
+        ax.get_legend().set_title(None)
         
         # Stats
         print('LDA analysis stats:')
@@ -200,6 +205,9 @@ class Figure3():
         print('---------------------------------------')
 
     def _make_panel_D(self, ax, df):
+        keys = ['within_task', 'between_task', 
+                'same_response', 'different_response']
+        df_plot = pd.melt(df, id_vars=['expt'], value_vars=keys)
         error_type = 'sem'
         plot_labels = ['Within task', 'Between task', 
                        'Same direction', 'Different direction']
@@ -209,8 +217,11 @@ class Figure3():
         ylim = [0, 30]
         kwargs = {'xticklabels': plot_labels, 'ylabel': ylabel,
                   'yticks': yticks, 'xlim': xlim, 'ylim': ylim}
-        barp = BarPlot(df)
-        _ = barp.plot_bar(self.distance_keys, error_type, ax, **kwargs)
+        sns.kdeplot(data=df_plot, x='value', hue='variable', ax=ax,
+                    common_norm=False, cumulative=True, linewidth=0.5)
+        ax.set_xlabel(ylabel)
+        ax.set_ylabel('Density')
+        ax.get_legend().set_title(None)
 
         # Stats
         print('Stats on distance between fixed points:')
@@ -226,14 +237,14 @@ class Figure3():
               f'signed-rank: w_stat = {w_direction}, p = {p_direction}, ' \
               f'N = {len(df)}')
 
-    def _get_user_fp_stats(self, data, user_id):
+    def _get_user_fp_stats(self, data, expt_str):
         stats = {}
         for key in self.distance_keys:
             if len(data[key]) == 0:
                 stats[key] = np.nan
             else:
                 stats[key] = np.mean(data[key])
-        stats['user_id'] = user_id
+        stats['expt'] = expt_str
         stats['N'] = data['N']
         stats['f_stimuli_with_fp'] = data['f_stimuli_with_fp']
         return pd.DataFrame(stats, index=[0])

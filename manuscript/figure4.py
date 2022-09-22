@@ -8,8 +8,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon, PearsonRConstantInputWarning
 
-from task_dyva.utils import save_figure, pearson_bootstrap
-from task_dyva.visualization import BarPlot, PlotModelLatents
+from task_dyva.utils import save_figure, pearson_bootstrap, adjust_boxplot
+from task_dyva.visualization import PlotModelLatents
 from task_dyva.model_analysis import LatentSeparation
 
 
@@ -25,6 +25,10 @@ class Figure4():
     figsize = (9, 5.5)
     figdpi = 300
     palette = 'viridis'
+    #box_colors = {'Participants': (0.2363, 0.3986, 0.5104, 1.0),
+    #              'Models': (0.2719, 0.6549, 0.4705, 1.0)}
+    box_colors = [(0.2363, 0.3986, 0.5104, 1.0),
+                  (0.2719, 0.6549, 0.4705, 1.0)]
 
     def __init__(self, model_dir, save_dir, metadata, rand_seed, n_boot):
         self.model_dir = model_dir
@@ -49,6 +53,7 @@ class Figure4():
         self.C_dists = []
         self.C_switch_costs = []
         self.E_stats = {'sc_plus_centroid_d': [], 'sc_minus_centroid_d': []}
+        self.E_plot = {'expt': [], 'model_type': [], 'value': []}
 
     def make_figure(self):
         print('Making Figure 4...')
@@ -89,12 +94,17 @@ class Figure4():
             # Comparison of sc- vs. sc+ models
             if sc in ['sc+', 'sc-']:
                 # Task centroid separation
+                self.E_plot['expt'].append(expt_str)
+                self.E_plot['value'].append(
+                        dist_stats['normed_centroid_dist'])
                 if sc == 'sc+':
                     self.E_stats['sc_plus_centroid_d'].append(
                         dist_stats['normed_centroid_dist'])
+                    self.E_plot['model_type'].append('sc+ models')
                 elif sc == 'sc-':
                     self.E_stats['sc_minus_centroid_d'].append(
                         dist_stats['normed_centroid_dist'])
+                    self.E_plot['model_type'].append('sc- models')
 
             # Examples
             if uid == self.A_id and sc != 'sc-':
@@ -155,11 +165,11 @@ class Figure4():
 
         print('Panel B, main summary stats')
         N = len(self.B_stats)
-        _, p = wilcoxon(self.B_stats, mode='approx')
+        w, p = wilcoxon(self.B_stats, mode='approx')
         n_pos = np.count_nonzero(np.nonzero(np.array(self.B_stats) > 0))
         print(f'Mean +/- s.e.m. corr. within model, dist vs. model RTs: ' \
               f'{np.mean(self.B_stats)} +/- {np.std(self.B_stats) / np.sqrt(N)}')
-        print(f'p = {p}')
+        print(f'Signed-rank test: p = {p}, W = {w}')
         print(f'Total models analyzed: {N}')
         print(f'Num. models with positive corr.: {n_pos}')
         print(f'Fraction of models with positive corr.: {n_pos / N}')
@@ -227,16 +237,18 @@ class Figure4():
 
     def _make_panel_E(self, ax):
         df = pd.DataFrame(self.E_stats)
-        keys = ['sc_plus_centroid_d', 'sc_minus_centroid_d']
+        df_plot = pd.DataFrame(self.E_plot)
         labels = ['sc+ models', 'sc- models']
         ylabel = 'Normalized distance between\ntask centroids (a.u.)'
-        xlim = [-0.75, 1.75]
-        ylim = [0, 0.75]
-        error_type = 'sem'
-        kwargs = {'xticklabels': labels, 'ylabel': ylabel,
-                  'xlim': xlim, 'ylim': ylim}
-        barp = BarPlot(df)
-        _ = barp.plot_bar(keys, error_type, ax, **kwargs)
+        sns.boxplot(data=df_plot, x='model_type', y='value', ax=ax,
+                    orient='v', fliersize=1, linewidth=0.5,
+                    palette=self.box_colors)
+        box_params = {'ylabel': ylabel,
+                      'ylim': [0, 1],
+                      'xlim': [-1, 2],
+                      'xticklabels': labels,
+                      'plot_legend': False}
+        adjust_boxplot(ax, **box_params)
         
         # Stats
         print('Panel E, sc+ vs. sc- distance stats:')
@@ -244,5 +256,5 @@ class Figure4():
                         y=df['sc_minus_centroid_d'].values,
                         mode='approx')
         print('sc+ vs. sc- distance b/w task centroids, signed-rank test: ' \
-              f'w = {w}, p = {p}, N = {len(df)}')
+              f'W = {w}, p = {p}, N = {len(df)}')
         print('----------------------------------------')

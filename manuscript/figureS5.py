@@ -125,7 +125,7 @@ class FigureS5():
         N_early = len(self.early_stats['u_mean_rt'])
         print(f'N early practice models: {N_early}')
         # Panel a: Mean RT, early pracice
-        A_params = {'ax_lims': [600, 1700],
+        A_params = {'ax_lims': [600, 1650],
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
         A_ax = fig.add_subplot(gs[:7, :7])
@@ -158,7 +158,7 @@ class FigureS5():
         print(f'N exGaussian models: {N_exgauss}')
         print(f'N Gaussian models: {N_gauss}')
         # Panel d: Mean RT, exGaussian smoothing
-        D_params = {'ax_lims': [600, 1300],
+        D_params = {'ax_lims': [600, 1250],
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
         D_ax = fig.add_subplot(gs[10:17, :7])

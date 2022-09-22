@@ -8,7 +8,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon
 
-from task_dyva.visualization import BarPlot
 from task_dyva.utils import save_figure, pearson_bootstrap
 
 
@@ -118,7 +117,7 @@ class Figure5():
         N = 25 # number of models
         yticks = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         ylims = [0.38, 1.05]
-        xticks = [-0.1]
+        xticks = [0]
         xticks.extend(self.noise_sds)
         xticklabels = ['Participants']
         xticklabels.extend(self.noise_sds)
@@ -148,8 +147,8 @@ class Figure5():
             print(f'Sign-rank test at {n_sd}SD noise: w = {wstat}, p = {p}')
      
         # Plot
-        ax.bar(-0.1, u_mean, yerr=u_error, width=0.05, color='plum',
-               error_kw={'elinewidth': 1})
+        sns.boxplot(y=u_vals, ax=ax, orient='v', fliersize=1,
+                    color='mediumorchid', linewidth=0.5, width=0.05)
         ax.plot(self.noise_sds, sc_plus_means, linestyle='-', 
                  color=cmap(0.3), label='sc+ models', linewidth=0.5)    
         ax.plot(self.noise_sds, sc_minus_means, linestyle='-', 
@@ -160,7 +159,7 @@ class Figure5():
         ax.fill_between(self.noise_sds, sc_minus_means - sc_minus_errors, 
                          sc_minus_means + sc_minus_errors, alpha=0.2, 
                          facecolor=cmap(0.7), label=None)
-        ax.plot([0, 0], [0.4, 1.03], 'k--', linewidth=0.5)
+        ax.plot([0.065, 0.065], [0.4, 1.03], 'k--', linewidth=0.25)
 
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticklabels)
@@ -173,6 +172,7 @@ class Figure5():
         ax.set_xlabel('Noise SD')
         ax.set_ylabel('Accuracy')
         ax.set_ylim(ylims)
+        ax.set_xlim([-0.075, 1.05])
         print('------------------------------')
 
     def _make_panel_B(self, ax):
@@ -239,8 +239,6 @@ def plot_scatter2(d1, d2, ax, line_ext, xlabel, ylabel, rng,
                                            alpha=alpha)
     p_str = '{:0.2e}'.format(p)
     tstr = f'r = {round(r, 2)}, 95% CI: ({round(ci_lo, 2)}, {round(ci_hi, 2)})\np = {p_str}'
-    #ax.text(text_x, text_y, tstr, transform=ax.transAxes, fontsize=10,
-    #        verticalalignment='top')
     print(tstr)
 
     return r

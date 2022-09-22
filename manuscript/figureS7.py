@@ -18,11 +18,11 @@ class FigureS7():
     analysis_dir = 'model_analysis'
     stats_fn = 'holdout_outputs_01SD.pkl'
     fp_fn = 'fixed_points.pkl'
-    age_bins = ['ages20to29', 'ages30to39', 'ages40to49', 
-                'ages50to59', 'ages60to69', 'ages70to79', 'ages80to89']
+    age_bin_strs = ['ages20to29', 'ages30to39', 'ages40to49', 
+                    'ages50to59', 'ages60to69', 'ages70to79', 'ages80to89']
     plot_age_bins = ['ages20to29', 'ages50to59', 'ages80to89']
     plot_titles = ['Ages 20 to 29', 'Ages 50 to 59', 'Ages 80 to 89']
-    figsize = (9, 13)
+    figsize = (10, 12)
     figdpi = 300
 
     def __init__(self, model_dir, save_dir, metadata):
@@ -36,8 +36,8 @@ class FigureS7():
         self.optimal = metadata['optimal']
 
         # Containers for summary stats
-        self.all_stats = {ab: [] for ab in self.age_bins}
-        self.all_fps = {ab: [] for ab in self.age_bins}
+        self.all_stats = {ab: [] for ab in self.age_bin_strs}
+        self.all_fps = {ab: [] for ab in self.age_bin_strs}
 
     def make_figure(self):
         print('Making Figure S7...')
@@ -47,13 +47,12 @@ class FigureS7():
         print('')
 
     def _run_preprocessing(self):
-        for expt_str, ab, uid, sc, exg, early, opt in zip(self.expts, 
-                                                          self.age_bins, 
-                                                          self.user_ids, 
-                                                          self.sc_status,
-                                                          self.exgauss,
-                                                          self.early,
-                                                          self.optimal):
+        for expt_str, ab, sc, exg, early, opt in zip(self.expts, 
+                                                     self.age_bins, 
+                                                     self.sc_status,
+                                                     self.exgauss,
+                                                     self.early,
+                                                     self.optimal):
 
             # Skip sc- models, exgauss+ models, early models, optimal models
             if sc == 'sc-' or exg == 'exgauss+' or early or opt:

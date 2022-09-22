@@ -38,6 +38,7 @@ class FigureS10():
         self.exgauss = metadata['exgauss']
         self.early = metadata['early']
         self.optimal = metadata['optimal']
+        self.rand_seed = rand_seed
         self.rng = np.random.default_rng(rand_seed)
         self.n_boot = n_boot
         self.alpha = 0.05
@@ -178,6 +179,8 @@ class FigureS10():
         print('----------------------------------------')
         for ind, pn, pnlab in zip(range(N), self.noise_sds[1:], 
                                   self.noise_labels[1:]):
+            # RNG needs to be reset to be consistent with stats from Fig. 5c
+            self.rng = np.random.default_rng(self.rand_seed)
             x = self.acc_diff_stats[pnlab]['u_con_effect']
             y = self.acc_diff_stats[pnlab]['acc_diff']
             r, p, ci_lo, ci_hi = pearson_bootstrap(x, y, self.rng,

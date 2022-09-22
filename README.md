@@ -82,7 +82,7 @@ Hardware requirements
 Using the default training parameters on GPU, training a single model typically requires ~30GB RAM, ~1.5GB GPU memory, and takes ~18-36h to train depending on what GPU is used (NVIDIA V100 Tensor Core: ~20h, NVIDIA GTX 1080 Ti: ~30h). Increasing the batch size can substantially reduce model training time, though in our experience the default batch size (128) produces the best model fits. 
 
 #### Reproducing the analyses
-The memory required to repeat the analyses from the paper *without* rerunning the preprocessing is minimal (<1GB). Running both make_main.py and make_supplement.py takes ~5mins. total. Rerunning the preprocessing requires more memory (~7GB) and takes about ~12h to run (tested on a 2017 MacBook Pro with a 2.8GHz processor and 16GB RAM). 
+The memory required to repeat the analyses from the paper *without* rerunning the preprocessing is minimal (<1GB). Running both make_main.py and make_supplement.py takes ~5mins. total. Rerunning the preprocessing requires more memory (~7GB) and takes about ~20h to run (tested on a 2017 MacBook Pro with a 2.8GHz processor and 16GB RAM). 
 
 
 Tracking model training

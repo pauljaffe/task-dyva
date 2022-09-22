@@ -6,8 +6,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from task_dyva.visualization import PlotRTs, BarPlot
-from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df
+from task_dyva.visualization import PlotRTs
+from task_dyva.utils import save_figure, plot_scatter, expt_stats_to_df, adjust_boxplot
 
 
 class Figure2():
@@ -23,6 +23,8 @@ class Figure2():
     figsize = (7, 6.5)
     figdpi = 300
     palette = 'viridis'
+    box_colors = {'Participants': (0.2363, 0.3986, 0.5104, 1.0),
+                  'Models': (0.2719, 0.6549, 0.4705, 1.0)}
 
     # Exemplars
     exemplar_ids = {1076: 'A1',
@@ -120,7 +122,7 @@ class Figure2():
         # Panels D-F: Model vs. participant scatter plots
         #################################################
         # Panel D: Mean RT
-        D_params = {'ax_lims': [600, 1250],
+        D_params = {'ax_lims': [600, 1300],
                     'metric': 'mean_rt',
                     'label': 'mean RT (ms)'}
         D_ax = fig.add_subplot(gs[8:15, 0:7])
@@ -128,7 +130,7 @@ class Figure2():
                      self.rng, n_boot=self.n_boot, alpha=self.alpha)
 
         # Panel E: Switch cost
-        E_params = {'ax_lims': [-25, 300],
+        E_params = {'ax_lims': [-25, 325],
                     'metric': 'switch_cost',
                     'label': 'switch cost (ms)'}
         E_ax = fig.add_subplot(gs[8:15, 9:16])
@@ -155,37 +157,37 @@ class Figure2():
 
         # Panel G: Mean RT
         G_df = stats_df.query("metric == 'mean_rt'")
-        G_params = {'ylim': [600, 1000],
-                    'ylabel': 'Mean RT (ms)',
+        G_params = {'ylabel': 'Mean RT (ms)',
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': True}
         G_ax = fig.add_subplot(gs[17:24, 0:7])
-        G_bar = BarPlot(G_df)
-        _ = G_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
-                                   error_type, G_ax, **G_params)
+        sns.boxplot(data=G_df, x='age_bin', y='value', hue='model_or_user',
+                    ax=G_ax, orient='v', fliersize=1, palette=self.box_colors,
+                    linewidth=0.5)
+        adjust_boxplot(G_ax, **G_params)
 
         # Panel H: Switch cost
         H_df = stats_df.query("metric == 'switch_cost'")
-        H_params = {'ylim': [0, 120],
-                    'xlabel': 'Age bin (years)',
+        H_params = {'xlabel': 'Age bin (years)',
                     'ylabel': 'Switch cost (ms)',
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': False}
         H_ax = fig.add_subplot(gs[17:24, 9:16])
-        H_bar = BarPlot(H_df)
-        _ = H_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
-                                   error_type, H_ax, **H_params)
+        sns.boxplot(data=H_df, x='age_bin', y='value', hue='model_or_user',
+                    ax=H_ax, orient='v', fliersize=1, palette=self.box_colors,
+                    linewidth=0.5)
+        adjust_boxplot(H_ax, **H_params)
 
         # Panel I: Congruency effect
         I_df = stats_df.query("metric == 'con_effect'")
-        I_params = {'ylim': [0, 130],
-                    'ylabel': 'Congruency effect (ms)',
+        I_params = {'ylabel': 'Congruency effect (ms)',
                     'xticklabels': self.age_bin_labels,
                     'plot_legend': False}
         I_ax = fig.add_subplot(gs[17:24, 18:25])
-        I_bar = BarPlot(I_df)
-        _ = I_bar.plot_grouped_bar('age_bin', 'value', 'model_or_user',
-                                   error_type, I_ax, **I_params)
+        sns.boxplot(data=I_df, x='age_bin', y='value', hue='model_or_user',
+                    ax=I_ax, orient='v', fliersize=1, palette=self.box_colors,
+                    linewidth=0.5)
+        adjust_boxplot(I_ax, **I_params)
 
         return fig
 
@@ -205,7 +207,9 @@ class Figure2():
             ax = plotter.plot_rt_dists(ax, plot_type)
 
             if key == 'A1':
-                ax.legend(labels=['Participant', 'Model'])
+                ax.get_legend().set_title(None)
+                handles, labels = ax.get_legend_handles_labels()
+                ax.legend(handles=handles, labels=['Participant', 'Model'])
                 ax.get_legend().get_frame().set_linewidth(0.0)
                 ax.set_ylabel('RT (ms)')
             else:
