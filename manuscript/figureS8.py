@@ -183,7 +183,11 @@ class FigureS8():
         anova_data = [self.age_df.query(f'{group_var} == @gv')['normed_centroid_dist'].values 
                       for gv in self.age_bin_strs]
         f_stat, p = f_oneway(*anova_data)
-        print(f'One-way ANOVA F stat = {f_stat}, p = {p}')
+        df_bn = len(self.age_bin_strs) - 1
+        alldata = np.concatenate(anova_data, axis=0)
+        N = alldata.shape[0]
+        df_wn = N - len(self.age_bin_strs)
+        print(f'One-way ANOVA: F({df_bn},{df_wn}) = {f_stat}, p = {p} \n')
         tukey = pairwise_tukeyhsd(endog=self.age_df['normed_centroid_dist'],
                                   groups=self.age_df['age_bin'],
                                   alpha=0.05)
