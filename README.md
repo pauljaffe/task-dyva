@@ -5,8 +5,7 @@ Task-DyVA (pronounced dee-vuh) is a framework for modeling sequential response t
 
 Preprint: Jaffe PI, Poldrack RA, Schafer RJ, Bissett PG. 2022. Discovering dynamical models of human behavior. bioRxiv. 
 
-Trained models & data: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6368413.svg)](https://doi.org/10.5281/zenodo.6368413)
-
+Trained models & data: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6368412.svg)](https://doi.org/10.5281/zenodo.6368412)
 
 Reproduce the figures and analyses from the paper
 ------------
