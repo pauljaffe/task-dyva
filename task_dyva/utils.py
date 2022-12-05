@@ -363,7 +363,7 @@ class RemapRTs():
 def adjust_boxplot(ax, **kwargs):
     ax.set_xlabel(kwargs.get('xlabel', None))
     ax.set_ylabel(kwargs.get('ylabel', None))
-    ax.set_xticklabels(kwargs.get('xticklabels', []),
+    ax.set_xticklabels(kwargs.get('xticklabels', ax.get_xticklabels()),
                        rotation=45, ha='right', rotation_mode='anchor')
     ax.set_xlim(kwargs.get('xlim', None))
     ax.set_ylim(kwargs.get('ylim', None))
