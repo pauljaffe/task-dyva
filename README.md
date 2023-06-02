@@ -3,7 +3,7 @@ Task-DyVA
 
 Task-DyVA (pronounced dee-vuh) is a framework for modeling sequential response time data from cognitive tasks. This repo contains code to train models and reproduce the analyses from the paper. 
 
-Preprint: Jaffe PI, Poldrack RA, Schafer RJ, Bissett PG. 2022. Discovering dynamical models of human behavior. bioRxiv. 
+Jaffe, P.I., Poldrack, R.A., Schafer, R.J. & Bissett, P.G. Modelling human behaviour in cognitive tasks with latent dynamical systems. *Nat Hum Behav* (2023).
 
 Trained models & data: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6368412.svg)](https://doi.org/10.5281/zenodo.6368412)
 
