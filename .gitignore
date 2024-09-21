@@ -3,6 +3,7 @@ training_runs/
 checkpoints/
 exploratory/
 tensorboard/
+manuscript/figures/
 *_inputs.pt
 *_data.pkl
 *split_inds.pkl

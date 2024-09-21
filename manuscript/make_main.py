@@ -2,31 +2,23 @@
 # (main figures only). See the README for detailed instructions.
 import os
 import time
+import argparse
 
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from manuscript.preprocessing import Preprocess
-from manuscript.figure2 import Figure2
-from manuscript.figure3 import Figure3
-from manuscript.figure4 import Figure4
-from manuscript.figure5 import Figure5
+from preprocessing import Preprocess
+from figure2 import Figure2
+from figure3 import Figure3
+from figure4 import Figure4
+from figure5 import Figure5
 
 
-do_preprocessing = False
+# Plotting and analysis params
 batch_size = 512
 rand_seed = 12345
 n_boot = 1000
 fontsize = 5
-
-# Specify paths to models/data, metadata, and a folder to save figures
-model_dir = '/PATH/TO/MODELS/AND/DATA'  # change
-expt_metadata_path = '/PATH/TO/METADATA'  # change
-figure_dir = '/PATH/TO/SAVE/FOLDER'  # change
-os.makedirs(figure_dir, exist_ok=True)
-metadata = pd.read_csv(expt_metadata_path, header=0)
-
-# Plotting params
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['axes.labelsize'] = fontsize
 plt.rcParams['axes.titlesize'] = fontsize
@@ -34,8 +26,37 @@ plt.rcParams['xtick.labelsize'] = fontsize
 plt.rcParams['ytick.labelsize'] = fontsize
 plt.rcParams['legend.fontsize'] = fontsize
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "model_dir",
+    help=(
+        "Directory with all model subdirectories (e.g. ages20to29_u1076_expt1). "
+        "and metadata.csv"
+    ),
+)
+parser.add_argument(
+    "-f",
+    "--figure_dir",
+    default="figures",
+    nargs="?",
+    type=str,
+    help="Name of directory within model_dir to save figures (defaults to 'figures')"
+)
+parser.add_argument(
+    "--do-preprocessing", 
+    action="store_true", 
+    help="Recompute all model outputs (not necessary to reproduce the figures)",
+)
+args = parser.parse_args()
+
+model_dir = args.model_dir
+figure_dir = os.path.join(model_dir, args.figure_dir)
+os.makedirs(figure_dir, exist_ok=True)
+metadata = pd.read_csv(os.path.join(model_dir, "metadata.csv"), header=0)
+
+# Run summary analyses and create figures
 t0 = time.time()
-if do_preprocessing:
+if args.do_preprocessing:
     preprocessing = Preprocess(model_dir, metadata, rand_seed, 
                                batch_size=batch_size)
     preprocessing.run_preprocessing()

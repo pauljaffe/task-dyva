@@ -2,33 +2,27 @@
 # (Extended Data only). See the README for detailed instructions.
 import os
 import time
+import argparse
 
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from manuscript.figureS2 import FigureS2
-from manuscript.figureS3 import FigureS3
-from manuscript.figureS4 import FigureS4
-from manuscript.figureS5 import FigureS5
-from manuscript.figureS6 import FigureS6
-from manuscript.figureS7 import FigureS7
-from manuscript.figureS8 import FigureS8
-from manuscript.figureS9 import FigureS9
-from manuscript.figureS10 import FigureS10
+from figureS2 import FigureS2
+from figureS3 import FigureS3
+from figureS4 import FigureS4
+from figureS5 import FigureS5
+from figureS6 import FigureS6
+from figureS7 import FigureS7
+from figureS8 import FigureS8
+from figureS9 import FigureS9
+from figureS10 import FigureS10
 
 
+# Plotting and analysis params
+batch_size = 512
 rand_seed = 12345
 n_boot = 1000
 fontsize = 5
-
-# Specify paths to models/data, metadata, and a folder to save figures
-model_dir = '/PATH/TO/MODELS/AND/DATA'  # change
-expt_metadata_path = '/PATH/TO/METADATA'  # change
-figure_dir = '/PATH/TO/SAVE/FOLDER'  # change
-os.makedirs(figure_dir, exist_ok=True)
-metadata = pd.read_csv(expt_metadata_path, header=0)
-
-# Plotting params
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['axes.labelsize'] = fontsize
 plt.rcParams['axes.titlesize'] = fontsize
@@ -36,6 +30,35 @@ plt.rcParams['xtick.labelsize'] = fontsize
 plt.rcParams['ytick.labelsize'] = fontsize
 plt.rcParams['legend.fontsize'] = fontsize
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "model_dir",
+    help=(
+        "Directory with all model subdirectories (e.g. ages20to29_u1076_expt1). "
+        "and metadata.csv"
+    ),
+)
+parser.add_argument(
+    "-f",
+    "--figure_dir",
+    default="figures",
+    nargs="?",
+    type=str,
+    help="Name of directory within model_dir to save figures (defaults to 'figures')"
+)
+parser.add_argument(
+    "--do-preprocessing", 
+    action="store_true", 
+    help="Recompute all model outputs (not necessary to reproduce the figures)",
+)
+args = parser.parse_args()
+
+model_dir = args.model_dir
+figure_dir = os.path.join(model_dir, args.figure_dir)
+os.makedirs(figure_dir, exist_ok=True)
+metadata = pd.read_csv(os.path.join(model_dir, "metadata.csv"), header=0)
+
+# Run summary analyses and create figures
 t0 = time.time()
 
 figS2 = FigureS2(model_dir, figure_dir, metadata)
