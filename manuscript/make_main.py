@@ -43,6 +43,7 @@ parser.add_argument(
     help="Name of directory within model_dir to save figures (defaults to 'figures')"
 )
 parser.add_argument(
+    "-p",
     "--do-preprocessing", 
     action="store_true", 
     help="Recompute all model outputs (not necessary to reproduce the figures)",

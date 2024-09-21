@@ -30,25 +30,22 @@ This will create an environment named task-dyva and automatically install all of
 conda activate task-dyva
 ``` 
 
-3) Download the models, data, and metadata linked above. 
+3) Download the trained model directories and metadata from Zenodo, linked above. These should be placed in one directory. For convenience, consider setting the overarching directory as an environment variable $MODEL_DIR (referenced below).
 
-4) Change the paths in make\_main.py and make\_supplement.py to the local copies of the models/data, metadata, and a folder to save the figures. 
-
-5) Run the scripts to make the figures and reproduce the analyses from the top-level directory of the task-DyVA repo (first ensure that the task-dyva conda environment is active):
+4) Run the summary analyses and create the manuscript figures using the make_main.py and make_supplement.py CLIs. From the manuscript folder:
 
 ```
-python make_main.py
-python make_supplement.py
+python make_main.py $MODEL_DIR -f "figures"
+python make_supplement.py $MODEL_DIR -f "figures"
 ```
 
-### Notes 
-1) You may need to add the task-dyva module to PYTHONPATH. An easy way to do this is to add a .pth file with the path to the local task-dyva module to `~/anaconda3/envs/task-dyva/lib/pythonX.X/site-packages/`. See [this post](https://stackoverflow.com/questions/37006114/anaconda-permanently-include-external-packages-like-in-pythonpath) for more detailed instructions. 
+Summary figures will be saved in $MODEL_DIR/figures. By default, the make_main.py script does not repeat computationally intensive preprocessing steps (e.g. recomputing model outputs for each model), but users who wish to repeat this preprocessing can do so by supplying the "-p" flag to the CLI command:
 
-2) To rerun only a subset of the analyses, comment out the relevant code in the make scripts.
+```
+python make_main.py $MODEL_DIR -f "figures" -p
+```
 
-3) By default, the make_main script does not repeat computationally intensive preprocessing steps (e.g. recomputing model outputs for each model), but users who wish to repeat this preprocessing can do so by setting the "do_preprocessing" flag at the top of the script to True. See the notes at the top of the scripts for additional options and info.
-
-4) To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
+To play around with the trained models analyzed in the paper, download the models linked above. The figure analysis files in /manuscript provide examples of how to do various analyses. 
 
 
 Quick start guide to model training
