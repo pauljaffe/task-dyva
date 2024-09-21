@@ -8,6 +8,7 @@ import pickle
 import glob
 import re
 import copy
+import pdb
 
 import torch
 from torch.optim import Adadelta, Adam
@@ -374,7 +375,7 @@ class Experiment(nn.Module,
     def _build_model(self):
         mtype = getattr(models,
                         self.config_params['model_params']['model_type'])
-        self.model = mtype(self.config_params)
+        self.model = mtype(self.config_params, self.device)
         self.to(self.device)
 
         if self.checkpoint is not None:

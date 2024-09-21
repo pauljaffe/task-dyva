@@ -132,10 +132,9 @@ class LLDVAE(nn.Module):
 
     """
 
-    def __init__(self, params):
+    def __init__(self, params, device):
         super(LLDVAE, self).__init__()
-        self.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device
         self.input_dim = params['data_params']['input_dim']
         self.u_dim = params['data_params']['u_dim']
         self.latent_dim = params['model_params']['latent_dim']
