@@ -8,7 +8,7 @@ from task_dyva import Experiment
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "raw_data_dir", 
+    "raw_data_dir",
     help=(
         "Path to directory with raw data used to train the model, "
         "e.g. $MODEL_DIR/ages30to39_u3531_expt1 if downloaded from Zenodo."
@@ -88,15 +88,16 @@ processed_data_dir = os.path.join(expt_save_dir, "processed_data")
 expt_name = args.expt_name
 device = args.device
 
-assert args.neptune is None or args.tensorboard is None, (
-        "Only one of TensorBoard or Neptune logging option can be set!"
-        )
+assert (
+    args.neptune is None or args.tensorboard is None
+), "Only one of TensorBoard or Neptune logging option can be set!"
 
 if args.neptune is not None:
-    expt_kwargs = {"logger_type": "neptune",
-                   "neptune_proj_name": args.neptune}
+    expt_kwargs = {"logger_type": "neptune", "neptune_proj_name": args.neptune}
 elif args.tensorboard is not None:
-    expt_kwargs = {"log_save_dir": os.path.join(args.save_dir, args.tensorboard)}
+    expt_kwargs = {
+        "log_save_dir": os.path.join(args.save_dir, args.tensorboard)
+    }
 else:
     expt_kwargs = {"log_save_dir": os.path.join(args.save_dir, "tensorboard")}
 
@@ -109,7 +110,13 @@ if args.batch_size is not None:
 if args.upscale_mult is not None:
     expt_kwargs["train"] = {"upscale_mult": 1}
 
-expt = Experiment(expt_save_dir, raw_data_dir, raw_data_fn, expt_name, 
-                  device=device, processed_dir=processed_data_dir, 
-                  **expt_kwargs)
+expt = Experiment(
+    expt_save_dir,
+    raw_data_dir,
+    raw_data_fn,
+    expt_name,
+    device=device,
+    processed_dir=processed_data_dir,
+    **expt_kwargs
+)
 expt.run_training()

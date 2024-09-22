@@ -9,7 +9,7 @@ from scipy.signal import find_peaks
 from .experiment import filter_nth_play, Experiment
 
 
-class SetUpTests():
+class SetUpTests:
     # Streamline setting up experiments for tests
     rand_seed = 11345
 
@@ -23,62 +23,74 @@ class SetUpTests():
 
     def get_pre_datasets(self, expt):
         # Get the original preprocessed splits from an experiment
-        with open(expt.data_path, 'rb') as handle:
+        with open(expt.data_path, "rb") as handle:
             pre_processed = pickle.load(handle)
-        nth_range = expt.config_params['data_params']['nth_play_range']
+        nth_range = expt.config_params["data_params"]["nth_play_range"]
         filtered_data = filter_nth_play(pre_processed, nth_range)
         pre_datasets = expt._split_train_val_test(filtered_data)
         return pre_datasets
 
     def make_experiment(self):
-        processed_dir = os.path.join(self.test_dir, 'processed')
-        expt = Experiment(self.test_dir, self.raw_data_dir, self.raw_data_fn, 
-                          'testing', device='cpu', processed_dir=processed_dir, 
-                          **self.expt_kwargs)
+        processed_dir = os.path.join(self.test_dir, "processed")
+        expt = Experiment(
+            self.test_dir,
+            self.raw_data_dir,
+            self.raw_data_fn,
+            "testing",
+            device="cpu",
+            processed_dir=processed_dir,
+            **self.expt_kwargs,
+        )
         return expt
 
     def get_excluded_games(self, data_dir, split):
-        exc_path = os.path.join(data_dir, f'processed/{split}_other_data.pkl')
-        with open(exc_path, 'rb') as handle:
+        exc_path = os.path.join(data_dir, f"processed/{split}_other_data.pkl")
+        with open(exc_path, "rb") as handle:
             other_data = pickle.load(handle)
-            exc = other_data['excluded']
+            exc = other_data["excluded"]
         exc_ids = [d.game_id for d in exc]
         return exc_ids
 
     def tear_down(self, data_dir, for_experiment_test=False):
-        shutil.rmtree(os.path.join(data_dir, 'processed'), 
-                      ignore_errors=True)
-        shutil.rmtree(os.path.join(data_dir, 'checkpoints'), 
-                      ignore_errors=True)
+        shutil.rmtree(os.path.join(data_dir, "processed"), ignore_errors=True)
+        shutil.rmtree(
+            os.path.join(data_dir, "checkpoints"), ignore_errors=True
+        )
         if not for_experiment_test:
-            if os.path.exists(os.path.join(data_dir, 'logger_info.pickle')):
-                os.remove(os.path.join(data_dir, 'logger_info.pickle'))
-            if os.path.exists(os.path.join(data_dir, 'split_inds.pkl')):
-                os.remove(os.path.join(data_dir, 'split_inds.pkl'))
+            if os.path.exists(os.path.join(data_dir, "logger_info.pickle")):
+                os.remove(os.path.join(data_dir, "logger_info.pickle"))
+            if os.path.exists(os.path.join(data_dir, "split_inds.pkl")):
+                os.remove(os.path.join(data_dir, "split_inds.pkl"))
 
 
 def continuous_to_discrete(data):
     # Input shopuld be EbbFlowGameData object
-    t = np.arange(data.continuous['point_dir'].shape[0]) * data.step
-    pt_ons, pt_offs, pt = _get_stimulus_bounds(data.continuous['point_dir'], 
-                                               t, data.step)
-    mv_ons, mv_offs, mv = _get_stimulus_bounds(data.continuous['mv_dir'], 
-                                               t, data.step)
-    cue_ons, cue_offs, cue = _get_stimulus_bounds(data.continuous['task_cue'], 
-                                                  t, data.step)
+    t = np.arange(data.continuous["point_dir"].shape[0]) * data.step
+    pt_ons, pt_offs, pt = _get_stimulus_bounds(
+        data.continuous["point_dir"], t, data.step
+    )
+    mv_ons, mv_offs, mv = _get_stimulus_bounds(
+        data.continuous["mv_dir"], t, data.step
+    )
+    cue_ons, cue_offs, cue = _get_stimulus_bounds(
+        data.continuous["task_cue"], t, data.step
+    )
     assert pt_ons == mv_ons == cue_ons
     assert pt_offs == mv_offs == cue_offs
 
-    rts, resp_dirs = _get_resp_from_continuous(data.continuous['urespdir'], 
-                                               t, pt_ons, pt_offs, data.step)
+    rts, resp_dirs = _get_resp_from_continuous(
+        data.continuous["urespdir"], t, pt_ons, pt_offs, data.step
+    )
 
-    discrete = {'onset': pt_ons,
-                'offset': pt_offs,
-                'point_dir': pt,
-                'mv_dir': mv,
-                'task_cue': cue,
-                'urespdir': resp_dirs,
-                'urt_samples': rts}
+    discrete = {
+        "onset": pt_ons,
+        "offset": pt_offs,
+        "point_dir": pt,
+        "mv_dir": mv,
+        "task_cue": cue,
+        "urespdir": resp_dirs,
+        "urt_samples": rts,
+    }
 
     return discrete
 
@@ -141,19 +153,19 @@ def bin_response_times(rts, step):
 
 
 def get_raw_path(config):
-    raw_dir = config['data_params']['data_path']
-    raw_fn = config['data_params']['data_fn']
+    raw_dir = config["data_params"]["data_path"]
+    raw_fn = config["data_params"]["data_fn"]
     return os.path.join(raw_dir, raw_fn)
 
 
 def append_test_data(test_df_list, orig_data, test_game_id):
-    this_test_df = orig_data.loc[orig_data['game_result_id'] == test_game_id]
+    this_test_df = orig_data.loc[orig_data["game_result_id"] == test_game_id]
     test_df_list.append(this_test_df)
     return test_df_list
 
 
 def elbo_testing(model, xu, anneal_param):
-    # Same as elbo objective, but doesn't average before returning; 
+    # Same as elbo objective, but doesn't average before returning;
     # also returns inputs. This is a kluge to facilitate testing.
     x, px_w, w, _, w_means, w_vars = model(xu)
     log_like = (px_w.log_prob(x)).sum(0).sum(-1)

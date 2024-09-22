@@ -9,75 +9,90 @@ from task_dyva.visualization import PlotRTs
 from task_dyva.utils import save_figure
 
 
-class FigureS2():
+class FigureS2:
     """Analysis methods and plotting routines to reproduce
     Figure S2 from the manuscript (example RT distributions).
     """
 
-    analysis_dir = 'model_analysis'
-    stats_fn = 'holdout_outputs_01SD.pkl'
+    analysis_dir = "model_analysis"
+    stats_fn = "holdout_outputs_01SD.pkl"
     figsize = (14, 20)
     figdpi = 300
-    age_bin_strs = ['ages20to29', 'ages30to39', 'ages40to49', 'ages50to59', 
-                'ages60to69', 'ages70to79', 'ages80to89']
-    age_bin_labels= ['Ages 20 to 29', 'Ages 30 to 39', 'Ages 40 to 49', 
-                     'Ages 50 to 59', 'Ages 60 to 69', 'Ages 70 to 79', 
-                     'Ages 80 to 89']
-    palette = 'viridis'
-    
+    age_bin_strs = [
+        "ages20to29",
+        "ages30to39",
+        "ages40to49",
+        "ages50to59",
+        "ages60to69",
+        "ages70to79",
+        "ages80to89",
+    ]
+    age_bin_labels = [
+        "Ages 20 to 29",
+        "Ages 30 to 39",
+        "Ages 40 to 49",
+        "Ages 50 to 59",
+        "Ages 60 to 69",
+        "Ages 70 to 79",
+        "Ages 80 to 89",
+    ]
+    palette = "viridis"
+
     def __init__(self, model_dir, save_dir, metadata):
         self.model_dir = model_dir
         self.save_dir = save_dir
-        self.expts = metadata['name']
-        self.age_bins = metadata['age_range']
-        self.user_ids = metadata['user_id']
-        self.sc_status = metadata['switch_cost_type']
-        self.exgauss = metadata['exgauss']
-        self.early = metadata['early']
-        self.optimal = metadata['optimal']
+        self.expts = metadata["name"]
+        self.age_bins = metadata["age_range"]
+        self.user_ids = metadata["user_id"]
+        self.sc_status = metadata["switch_cost_type"]
+        self.exgauss = metadata["exgauss"]
+        self.early = metadata["early"]
+        self.optimal = metadata["optimal"]
 
         # Containers for summary stats
         self.all_stats = {ab: [] for ab in self.age_bin_strs}
 
     def make_figure(self):
-        print('Making Figure S2...')
+        print("Making Figure S2...")
         self._run_preprocessing()
         fig = self._plot_figure()
-        save_figure(fig, self.save_dir, 'FigS2')
-        print('')
+        save_figure(fig, self.save_dir, "FigS2")
+        print("")
 
     def _run_preprocessing(self):
-        for expt_str, ab, uid, sc, exg, early, opt in zip(self.expts, 
-                                                          self.age_bins, 
-                                                          self.user_ids, 
-                                                          self.sc_status,
-                                                          self.exgauss,
-                                                          self.early,
-                                                          self.optimal):
-
+        for expt_str, ab, uid, sc, exg, early, opt in zip(
+            self.expts,
+            self.age_bins,
+            self.user_ids,
+            self.sc_status,
+            self.exgauss,
+            self.early,
+            self.optimal,
+        ):
             # Skip sc- models, exgauss+ models, early models, optimal models
-            if sc == 'sc-' or exg == 'exgauss+' or early or opt:
+            if sc == "sc-" or exg == "exgauss+" or early or opt:
                 continue
-            
+
             # Load stats from the holdout data
-            stats_path = os.path.join(self.model_dir, expt_str, 
-                                      self.analysis_dir, self.stats_fn)
-            with open(stats_path, 'rb') as path:
+            stats_path = os.path.join(
+                self.model_dir, expt_str, self.analysis_dir, self.stats_fn
+            )
+            with open(stats_path, "rb") as path:
                 expt_stats = pickle.load(path)
             self.all_stats[ab].append(expt_stats)
 
     def _plot_figure(self):
-        fig, axes = plt.subplots(10, 7, figsize=self.figsize,
-                                 dpi=self.figdpi)
-        rt_plot_type = 'all'
+        fig, axes = plt.subplots(10, 7, figsize=self.figsize, dpi=self.figdpi)
+        rt_plot_type = "all"
 
-        for ab_ind, ab in enumerate(self.age_bin_strs):    
+        for ab_ind, ab in enumerate(self.age_bin_strs):
             ab_stats = self.all_stats[ab]
-            ab_means = np.array([s.summary_stats['u_mean_rt'] 
-                                 for s in ab_stats])
+            ab_means = np.array(
+                [s.summary_stats["u_mean_rt"] for s in ab_stats]
+            )
             sort_inds = np.argsort(ab_means)
             plot_inds = np.arange(0, len(sort_inds), 2)
-            
+
             for ax_ind, p in enumerate(plot_inds):
                 this_ax = axes[ax_ind, ab_ind]
                 this_stats = ab_stats[sort_inds[p]]
@@ -89,9 +104,11 @@ class FigureS2():
                 if ax_ind == 0 and ab_ind == 0:
                     this_ax.get_legend().set_title(None)
                     handles, labels = this_ax.get_legend_handles_labels()
-                    this_ax.legend(handles=handles, labels=['Participant', 'Model'])
+                    this_ax.legend(
+                        handles=handles, labels=["Participant", "Model"]
+                    )
                     this_ax.get_legend().get_frame().set_linewidth(0.0)
-                    this_ax.set_ylabel('RT (ms)')
+                    this_ax.set_ylabel("RT (ms)")
                 else:
                     this_ax.get_legend().remove()
 

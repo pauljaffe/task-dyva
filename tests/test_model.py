@@ -7,25 +7,39 @@ import pytest
 from task_dyva.testing import SetUpTests, elbo_testing
 
 
-@pytest.mark.parametrize('resamp, sm, noise_sd, rt_method, out_method, \
-                          out_thresh', [
-    (None, 'gaussian', 0, 'max', 'mad', 10),
-])
+@pytest.mark.parametrize(
+    "resamp, sm, noise_sd, rt_method, out_method, \
+                          out_thresh",
+    [
+        (None, "gaussian", 0, "max", "mad", 10),
+    ],
+)
 def test_model(resamp, sm, noise_sd, rt_method, out_method, out_thresh):
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    rel_data_dir = 'user1365'
-    raw_data_dir = os.path.join(this_dir, 'test_data', rel_data_dir)
-    raw_data_fn = 'user1365.pickle'
+    rel_data_dir = "user1365"
+    raw_data_dir = os.path.join(this_dir, "test_data", rel_data_dir)
+    raw_data_fn = "user1365.pickle"
     test_dir = raw_data_dir
 
-    tparams = {'data_augmentation_type': resamp, 'smoothing_type': sm,
-               'noise_sd': noise_sd, 'rt_method': rt_method,
-               'start_times': [5000, 55000],
-               'upscale_mult': 2, 'duration': 5000}
+    tparams = {
+        "data_augmentation_type": resamp,
+        "smoothing_type": sm,
+        "noise_sd": noise_sd,
+        "rt_method": rt_method,
+        "start_times": [5000, 55000],
+        "upscale_mult": 2,
+        "duration": 5000,
+    }
 
-    expt_kwargs = {'outlier_method': out_method, 'outlier_thresh': out_thresh,
-                   'mode': 'full', 'nth_play_range': [150, 200], 
-                   'train': tparams, 'val': tparams, 'test': tparams}
+    expt_kwargs = {
+        "outlier_method": out_method,
+        "outlier_thresh": out_thresh,
+        "mode": "full",
+        "nth_play_range": [150, 200],
+        "train": tparams,
+        "val": tparams,
+        "test": tparams,
+    }
 
     tester = SetUpTests(test_dir, raw_data_dir, raw_data_fn, **expt_kwargs)
     tester.tear_down(test_dir)
@@ -52,8 +66,8 @@ def check_dead_subgraphs(expt, dataset):
     for param_name, param in expt.named_parameters():
         if param.requires_grad:
             assert param.grad is not None
-            grad_sum = torch.sum(param.grad ** 2).item()
-            assert grad_sum != 0.
+            grad_sum = torch.sum(param.grad**2).item()
+            assert grad_sum != 0.0
 
 
 def check_sample_independence(expt, dataset, mask_inds=[0, 13, 23]):
@@ -84,8 +98,8 @@ def check_output_shape(expt, dataset):
     xu = dataset.xu
     n_timesteps = xu.shape[0]
     n_samples = xu.shape[1]
-    w_dim = expt.config_params['model_params']['w_dim']
-    z_dim = expt.config_params['model_params']['latent_dim']
+    w_dim = expt.config_params["model_params"]["w_dim"]
+    z_dim = expt.config_params["model_params"]["latent_dim"]
 
     outputs = expt.model.forward(xu, generate_mode=True, clamp=False)
     x_in = outputs[0]
