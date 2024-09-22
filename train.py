@@ -55,6 +55,30 @@ parser.add_argument(
         "Not compatible with -np flag (Neptune logging)."
     ),
 )
+parser.add_argument(
+    "-rs",
+    "--rand_seed",
+    nargs="?",
+    type=int,
+    help="Random seed used to initialize parameters and data.",
+)
+parser.add_argument(
+    "-bs",
+    "--batch_size",
+    nargs="?",
+    type=int,
+    help="Sets the batch size.",
+)
+parser.add_argument(
+    "-um",
+    "--upscale_mult",
+    nargs="?",
+    type=int,
+    help=(
+        "Number of times to upscale the training data set size for data augmentation. ",
+        "Set to 1 to reduce memory burden (default 10)",
+    ),
+)
 
 args = parser.parse_args()
 raw_data_dir = args.raw_data_dir
@@ -69,10 +93,21 @@ assert args.neptune is None or args.tensorboard is None, (
         )
 
 if args.neptune is not None:
-    expt_kwargs = {'logger_type': 'neptune',
-                   'neptune_proj_name': args.neptune}
+    expt_kwargs = {"logger_type": "neptune",
+                   "neptune_proj_name": args.neptune}
 elif args.tensorboard is not None:
-    expt_kwargs = {'log_save_dir': os.path.join(args.save_dir, args.tensorboard)}
+    expt_kwargs = {"log_save_dir": os.path.join(args.save_dir, args.tensorboard)}
+else:
+    expt_kwargs = {"log_save_dir": os.path.join(args.save_dir, "tensorboard")}
+
+if args.rand_seed is not None:
+    expt_kwargs["rand_seed"] = args.rand_seed
+
+if args.batch_size is not None:
+    expt_kwargs["batch_size"] = args.batch_size
+
+if args.upscale_mult is not None:
+    expt_kwargs["train"] = {"upscale_mult": 1}
 
 expt = Experiment(expt_save_dir, raw_data_dir, raw_data_fn, expt_name, 
                   device=device, processed_dir=processed_data_dir, 
