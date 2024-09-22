@@ -18,7 +18,7 @@ manuscript/figures/
 # Virtual environment
 env/
 env3_10/
-requirements3_10.txt
+requirements*.txt
 
 # Byte-compiled / optimized files
 __pycache__/
