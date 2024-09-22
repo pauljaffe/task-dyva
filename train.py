@@ -1,5 +1,6 @@
 import os
 import argparse
+import time
 
 from task_dyva import Experiment
 
@@ -79,6 +80,16 @@ parser.add_argument(
         "Set to 1 to reduce memory burden (default 10)",
     ),
 )
+parser.add_argument(
+    "-me",
+    "--max_epochs",
+    nargs="?",
+    type=int,
+    help=(
+        "Max number of training epochs to run. (Early stopping may be triggered ",
+        "before reaching max_epochs)",
+    ),
+)
 
 args = parser.parse_args()
 raw_data_dir = args.raw_data_dir
@@ -110,6 +121,10 @@ if args.batch_size is not None:
 if args.upscale_mult is not None:
     expt_kwargs["train"] = {"upscale_mult": 1}
 
+if args.max_epochs is not None:
+    expt_kwargs["num_epochs"] = args.max_epochs
+
+t0 = time.time()
 expt = Experiment(
     expt_save_dir,
     raw_data_dir,
@@ -117,6 +132,7 @@ expt = Experiment(
     expt_name,
     device=device,
     processed_dir=processed_data_dir,
-    **expt_kwargs
+    **expt_kwargs,
 )
 expt.run_training()
+print(f"Experiment run time: {time.time() - t0}s")

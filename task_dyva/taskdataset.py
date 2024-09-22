@@ -1236,10 +1236,6 @@ class EbbFlowGameData:
                     )
                     if rdir == d
                 ]
-                # this_mrts = [20*(rt+on) for rt, on, rdir in zip(self.discrete['urt_samples'],
-                #                                    self.discrete['onset'],
-                #                                    self.discrete['urespdir'])
-                #             if rdir == d]
 
                 sns.scatterplot(
                     x=x_plot[this_mrts],

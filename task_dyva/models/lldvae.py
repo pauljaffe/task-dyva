@@ -318,17 +318,7 @@ class LLDVAE(nn.Module):
         return alpha_t
 
     def _batch_wsum(self, M, alphas):
-        M_wsum = torch.sum(
-            torch.stack(
-                [
-                    alphas[:, i, None, None] * M[i, :, :]
-                    for i in range(self.trans_dim)
-                ],
-                dim=0,
-            ),
-            dim=0,
-        )
-        return M_wsum
+        return (alphas[:, :, None, None] * M[None, :, :, :]).sum(dim=1)
 
     def _setup_propagate(self, xu, generate_mode, clamp):
         seq_length = xu.shape[0]
@@ -354,9 +344,9 @@ class LLDVAE(nn.Module):
         if self.trans_dim == 0:
             n_data = z_t.shape[0]
             alpha_t = torch.tensor([0], device=self.device)
-            A_t = torch.stack(n_data * [self.A_mats[0, :, :]])
-            B_t = torch.stack(n_data * [self.B_mats[0, :, :]])
-            C_t = torch.stack(n_data * [self.C_mats[0, :, :]])
+            A_t = self.A_mats[0].unsqueeze(0).repeat(n_data, 1, 1)
+            B_t = self.B_mats[0].unsqueeze(0).repeat(n_data, 1, 1)
+            C_t = self.C_mats[0].unsqueeze(0).repeat(n_data, 1, 1)
         else:
             alpha_t = self._gen_trans_params(z_t, u_t)
             A_t = self._batch_wsum(self.A_mats, alpha_t)
