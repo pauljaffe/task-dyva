@@ -53,7 +53,7 @@ args = parser.parse_args()
 model_dir = args.model_dir
 figure_dir = os.path.join(model_dir, args.figure_dir)
 os.makedirs(figure_dir, exist_ok=True)
-metadata = pd.read_csv(os.path.join(model_dir, "metadata.csv"), header=0)
+metadata = pd.read_csv(os.path.join(model_dir, "model_metadata.csv"), header=0)
 
 # Run summary analyses and create figures
 t0 = time.time()

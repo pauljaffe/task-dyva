@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import wilcoxon, PearsonRConstantInputWarning
+from scipy.stats import wilcoxon
 
 from task_dyva.utils import save_figure, pearson_bootstrap, adjust_boxplot
 from task_dyva.visualization import PlotModelLatents
