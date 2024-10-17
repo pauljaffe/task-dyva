@@ -123,11 +123,6 @@ class _Decoder(nn.Module):
 class LLDVAE(nn.Module):
     """Implements a locally linear dynamical variational autoencoder (LLDVAE).
 
-    Implementation note: the PyTorch distribution method rsample
-    automatically reparameterizes the variables so that the sampling
-    process is differentiable (i.e., there is no need to explicitly
-    implement a separate reparameterization method as is commonly done).
-
     Notes on the variables
     ----------------------
     The main variables used in the implementation are listed below.
@@ -308,6 +303,7 @@ class LLDVAE(nn.Module):
             * self.w0_vars.size(-1)
             + Constants.eta
         )
+        # rsample implements reparameterization trick
         w0_sample = self.qw_x(w0_means, w0_vars).rsample()
         z0 = self.init_z0(w0_sample)
         return z0, w0_sample, w0_means, w0_vars
